@@ -1,7 +1,4 @@
-use std::{
-    collections::BTreeMap,
-    path::Path,
-};
+use std::{collections::BTreeMap, path::Path};
 
 use super::schema::EntityTypeSchema;
 use crate::error::StorageError;

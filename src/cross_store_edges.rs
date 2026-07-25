@@ -1,7 +1,4 @@
-use std::path::{
-    Path,
-    PathBuf,
-};
+use std::path::{Path, PathBuf};
 
 use uuid::Uuid;
 
@@ -9,8 +6,7 @@ use crate::{
     discovery::discover_stores,
     model::index_entry::ContentKind,
     workspace::{
-        discover_workspace_scan_roots_with_policy,
-        resolve_store_root_from,
+        discover_workspace_scan_roots_with_policy, resolve_store_root_from,
         resolve_workspace_root_from_store_root,
     },
     workspace_policy::WorkspacePolicy,
@@ -209,11 +205,8 @@ mod tests {
             .join(layout.entity_dir)
             .join(id.to_string());
         fs::create_dir_all(&path).unwrap();
-        fs::write(
-            path.join(layout.manifest_file),
-            "id = \"placeholder\"\n",
-        )
-        .unwrap();
+        fs::write(path.join(layout.manifest_file), "id = \"placeholder\"\n")
+            .unwrap();
     }
 
     #[test]
@@ -233,10 +226,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(
-            classifier.classify(target_id),
-            EdgeReferenceResolution::Ok
-        );
+        assert_eq!(classifier.classify(target_id), EdgeReferenceResolution::Ok);
     }
 
     #[test]

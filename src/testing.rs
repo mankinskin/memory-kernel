@@ -5,7 +5,7 @@
 //!
 //! ```toml
 //! [dev-dependencies]
-//! memory-api = { path = "...", features = ["testing"] }
+//! memory-kernel = { path = "...", features = ["testing"] }
 //! ```
 //!
 //! # Design
@@ -20,10 +20,7 @@
 //! [`SandboxSetup::setup`].  That keeps the generic struct free of
 //! domain-specific binary calls.
 
-use std::path::{
-    Path,
-    PathBuf,
-};
+use std::path::{Path, PathBuf};
 
 use tempfile::TempDir;
 

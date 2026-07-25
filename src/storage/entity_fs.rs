@@ -1,27 +1,13 @@
 use std::{
     collections::BTreeMap,
-    fs::{
-        self,
-        File,
-        OpenOptions,
-    },
-    io::{
-        BufRead,
-        BufReader,
-        Write,
-    },
-    path::{
-        Path,
-        PathBuf,
-    },
+    fs::{self, File, OpenOptions},
+    io::{BufRead, BufReader, Write},
+    path::{Path, PathBuf},
 };
 
 use chrono::Utc;
 use fs4::fs_std::FileExt;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -30,9 +16,7 @@ use crate::{
     model::{
         entity::EntityManifest,
         filesystem::{
-            EntityFolderConfig,
-            ParseDiagnostic,
-            parse_entity_manifest_toml,
+            EntityFolderConfig, ParseDiagnostic, parse_entity_manifest_toml,
         },
     },
 };
@@ -293,8 +277,9 @@ impl EntityFs {
 
         match self.read(&path) {
             Ok(manifest) => Ok(Some(EntityScanEntry { id, path, manifest })),
-            Err(StorageError::ParseError { path, reason }) =>
-                Err(ParseDiagnostic { path, reason }),
+            Err(StorageError::ParseError { path, reason }) => {
+                Err(ParseDiagnostic { path, reason })
+            },
             Err(error) => Err(ParseDiagnostic {
                 path: manifest_path,
                 reason: error.to_string(),

@@ -1,4 +1,4 @@
-//! Canonical `IndexEntry` schema for memory-api store index artifacts.
+//! Canonical `IndexEntry` schema for memory-kernel store index artifacts.
 //!
 //! Every generated index artifact — folder-level README indexes, workspace-folder
 //! `.index.toon` files, and `.agents/` hook entries — round-trips through these
@@ -33,18 +33,9 @@
 //! computed digest is identical across runs, platforms, and Rust toolchain
 //! versions. The only external dependency is the SHA-256 algorithm.
 
-use chrono::{
-    DateTime,
-    Utc,
-};
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use sha2::{
-    Digest as _,
-    Sha256,
-};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest as _, Sha256};
 use uuid::Uuid;
 
 /// The domain category of the source entity captured in an [`IndexEntry`].
@@ -209,7 +200,7 @@ impl IndexRelations {
 /// `IndexEntry` is the unit of information in every generated index. One entry
 /// corresponds to one source entity (ticket, spec, rule, test, etc.) at a
 /// specific point in time. Multiple entries form an index artifact; multiple
-/// index artifacts form the full memory-api store index.
+/// index artifacts form the full memory-kernel store index.
 ///
 /// # Field stability
 ///

@@ -175,28 +175,39 @@ pub enum ProtocolError {
 impl ProtocolError {
     pub fn code(&self) -> &'static str {
         match self {
-            ProtocolError::ValidateInvalidState { .. } =>
-                "validate.invalid_state",
-            ProtocolError::ValidateSameIdentity { .. } =>
-                "validate.same_identity",
-            ProtocolError::ValidateAssignmentMismatch =>
-                "validate.assignment_mismatch",
-            ProtocolError::ValidateMissingEvidence =>
-                "validate.missing_evidence",
-            ProtocolError::ReleaseInvalidState { .. } =>
-                "release.invalid_state",
-            ProtocolError::ReleaseValidationNotPassed { .. } =>
-                "release.validation_not_passed",
-            ProtocolError::ReleaseAssignmentChainMissing =>
-                "release.assignment_chain_missing",
-            ProtocolError::ReleaseGatesNotSatisfied(_) =>
-                "release.gates_not_satisfied",
-            ProtocolError::ReleaseMergeMetadataMissing =>
-                "release.merge_metadata_missing",
-            ProtocolError::ReleaseTargetNotFound(_) =>
-                "release.target_not_found",
-            ProtocolError::ReleaseTicketStateInvalid(_) =>
-                "release.ticket_state_invalid",
+            ProtocolError::ValidateInvalidState { .. } => {
+                "validate.invalid_state"
+            },
+            ProtocolError::ValidateSameIdentity { .. } => {
+                "validate.same_identity"
+            },
+            ProtocolError::ValidateAssignmentMismatch => {
+                "validate.assignment_mismatch"
+            },
+            ProtocolError::ValidateMissingEvidence => {
+                "validate.missing_evidence"
+            },
+            ProtocolError::ReleaseInvalidState { .. } => {
+                "release.invalid_state"
+            },
+            ProtocolError::ReleaseValidationNotPassed { .. } => {
+                "release.validation_not_passed"
+            },
+            ProtocolError::ReleaseAssignmentChainMissing => {
+                "release.assignment_chain_missing"
+            },
+            ProtocolError::ReleaseGatesNotSatisfied(_) => {
+                "release.gates_not_satisfied"
+            },
+            ProtocolError::ReleaseMergeMetadataMissing => {
+                "release.merge_metadata_missing"
+            },
+            ProtocolError::ReleaseTargetNotFound(_) => {
+                "release.target_not_found"
+            },
+            ProtocolError::ReleaseTicketStateInvalid(_) => {
+                "release.ticket_state_invalid"
+            },
         }
     }
 }

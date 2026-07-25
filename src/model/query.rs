@@ -1,7 +1,4 @@
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
 use crate::error::QueryParseError;
@@ -320,11 +317,12 @@ fn tokenize(input: &str) -> Vec<String> {
                 bracket_depth -= 1;
                 current.push(ch);
             },
-            c if c.is_whitespace() && !in_quotes && bracket_depth == 0 =>
+            c if c.is_whitespace() && !in_quotes && bracket_depth == 0 => {
                 if !current.is_empty() {
                     tokens.push(current.clone());
                     current.clear();
-                },
+                }
+            },
             _ => current.push(ch),
         }
     }

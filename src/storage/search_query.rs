@@ -54,8 +54,9 @@ pub(super) fn expr_to_query(
     match expr {
         Expr::Fts(text) => full_text_query(text, fields, index),
         Expr::Field { key, value } => field_expr_to_query(key, value, fields),
-        Expr::Compare { key, op, value } =>
-            compare_expr_to_query(key, *op, value, fields),
+        Expr::Compare { key, op, value } => {
+            compare_expr_to_query(key, *op, value, fields)
+        },
         Expr::And(exprs) => and_expr_to_query(exprs, fields, index),
         Expr::Or(exprs) => or_expr_to_query(exprs, fields, index),
         Expr::Not(expr) => not_expr_to_query(expr, fields, index),
@@ -101,16 +102,18 @@ pub(super) fn compare_expr_to_query(
     };
 
     match (op, value) {
-        (CompareOp::Contains, ValueExpr::Text(text)) =>
+        (CompareOp::Contains, ValueExpr::Text(text)) => {
             substring_query_for_fields(text, &[field])
-                .unwrap_or_else(|| Box::new(AllQuery)),
+                .unwrap_or_else(|| Box::new(AllQuery))
+        },
         (CompareOp::Exists, _) => exists_query(field),
         (CompareOp::Gt, _)
         | (CompareOp::Gte, _)
         | (CompareOp::Lt, _)
         | (CompareOp::Lte, _)
-        | (CompareOp::Range, _) =>
-            build_range_query(field, field_name, fields, op, value),
+        | (CompareOp::Range, _) => {
+            build_range_query(field, field_name, fields, op, value)
+        },
         _ => Box::new(AllQuery),
     }
 }
@@ -124,10 +127,7 @@ pub(super) fn build_range_query(
 ) -> Box<dyn tantivy::query::Query> {
     use crate::model::query::CompareOp;
     use std::ops::Bound;
-    use tantivy::query::{
-        EmptyQuery,
-        RangeQuery,
-    };
+    use tantivy::query::{EmptyQuery, RangeQuery};
 
     let get_term = |val_str: &str| -> Option<Term> {
         if field == fields.effort {
@@ -211,11 +211,7 @@ pub(super) fn build_range_query(
 
 /// Match any document that has a non-null value in `field`.
 pub(super) fn exists_query(field: Field) -> Box<dyn tantivy::query::Query> {
-    use tantivy::query::{
-        BooleanQuery,
-        Occur,
-        RegexQuery,
-    };
+    use tantivy::query::{BooleanQuery, Occur, RegexQuery};
 
     // A field exists when it matches any non-empty value. `.+` over the
     // indexed text approximates presence for STRING/TEXT fields.
@@ -233,11 +229,7 @@ pub(super) fn full_text_query(
     fields: &SearchFields,
     index: &Index,
 ) -> Box<dyn tantivy::query::Query> {
-    use tantivy::query::{
-        AllQuery,
-        BooleanQuery,
-        Occur,
-    };
+    use tantivy::query::{AllQuery, BooleanQuery, Occur};
 
     let mut query_parser = tantivy::query::QueryParser::for_index(
         index,
@@ -251,11 +243,12 @@ pub(super) fn full_text_query(
     );
 
     match (exact_query, substring_query) {
-        (Some(exact_query), Some(substring_query)) =>
+        (Some(exact_query), Some(substring_query)) => {
             Box::new(BooleanQuery::new(vec![
                 (Occur::Should, exact_query),
                 (Occur::Should, substring_query),
-            ])),
+            ]))
+        },
         (Some(exact_query), None) => exact_query,
         (None, Some(substring_query)) => substring_query,
         (None, None) => Box::new(AllQuery),
@@ -266,11 +259,7 @@ pub(super) fn substring_query_for_fields(
     text: &str,
     fields: &[Field],
 ) -> Option<Box<dyn tantivy::query::Query>> {
-    use tantivy::query::{
-        BooleanQuery,
-        Occur,
-        RegexQuery,
-    };
+    use tantivy::query::{BooleanQuery, Occur, RegexQuery};
 
     let needle = text.trim().to_ascii_lowercase();
     if needle.is_empty() || needle.chars().any(char::is_whitespace) {
@@ -303,10 +292,7 @@ pub(super) fn id_field_query(
     text: &str,
     fields: &SearchFields,
 ) -> Box<dyn tantivy::query::Query> {
-    use tantivy::query::{
-        BooleanQuery,
-        Occur,
-    };
+    use tantivy::query::{BooleanQuery, Occur};
 
     let exact_query = term_query(fields.id, text);
     match substring_query_for_fields(text, &[fields.id]) {
@@ -322,10 +308,7 @@ pub(super) fn title_field_query(
     text: &str,
     fields: &SearchFields,
 ) -> Box<dyn tantivy::query::Query> {
-    use tantivy::query::{
-        BooleanQuery,
-        Occur,
-    };
+    use tantivy::query::{BooleanQuery, Occur};
 
     let exact_query = term_query(fields.title, text);
     match substring_query_for_fields(text, &[fields.title]) {
@@ -349,8 +332,9 @@ pub(super) fn field_expr_to_query(
     };
 
     match value {
-        ValueExpr::Text(text) if key == "title" =>
-            title_field_query(text, fields),
+        ValueExpr::Text(text) if key == "title" => {
+            title_field_query(text, fields)
+        },
         ValueExpr::Text(text) if key == "id" => id_field_query(text, fields),
         ValueExpr::Text(text) => term_query(field, text),
         ValueExpr::Range { .. } => {
@@ -400,11 +384,7 @@ pub(super) fn and_expr_to_query(
     fields: &SearchFields,
     index: &Index,
 ) -> Box<dyn tantivy::query::Query> {
-    use tantivy::query::{
-        AllQuery,
-        BooleanQuery,
-        Occur,
-    };
+    use tantivy::query::{AllQuery, BooleanQuery, Occur};
 
     if exprs.is_empty() {
         return Box::new(AllQuery);
@@ -422,11 +402,7 @@ pub(super) fn or_expr_to_query(
     fields: &SearchFields,
     index: &Index,
 ) -> Box<dyn tantivy::query::Query> {
-    use tantivy::query::{
-        AllQuery,
-        BooleanQuery,
-        Occur,
-    };
+    use tantivy::query::{AllQuery, BooleanQuery, Occur};
 
     if exprs.is_empty() {
         return Box::new(AllQuery);
@@ -444,11 +420,7 @@ pub(super) fn not_expr_to_query(
     fields: &SearchFields,
     index: &Index,
 ) -> Box<dyn tantivy::query::Query> {
-    use tantivy::query::{
-        AllQuery,
-        BooleanQuery,
-        Occur,
-    };
+    use tantivy::query::{AllQuery, BooleanQuery, Occur};
 
     Box::new(BooleanQuery::new(vec![
         (Occur::Must, Box::new(AllQuery)),

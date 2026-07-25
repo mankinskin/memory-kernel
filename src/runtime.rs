@@ -1,13 +1,10 @@
 use std::path::Path;
 
 use tracing_subscriber::{
-    EnvFilter,
-    fmt,
-    layer::SubscriberExt as _,
-    util::SubscriberInitExt as _,
+    EnvFilter, fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _,
 };
 
-/// Initialize a shared tracing subscriber for memory-api transport binaries.
+/// Initialize a shared tracing subscriber for memory-kernel transport binaries.
 ///
 /// Level resolution order:
 /// 1. explicit `log_level`

@@ -1,22 +1,15 @@
 use std::collections::BTreeMap;
 
-use chrono::{
-    Duration,
-    Utc,
-};
+use chrono::{Duration, Utc};
 
 use crate::storage::index::RedbIndexStore;
 
 use super::{
     super::{
-        BoardEntry,
-        BoardEntryStatus,
-        BoardError,
-        BoardHistorySnapshot,
+        BoardEntry, BoardEntryStatus, BoardError, BoardHistorySnapshot,
         BoardSnapshot,
     },
-    load_all_entries,
-    read_board_config,
+    load_all_entries, read_board_config,
 };
 
 impl RedbIndexStore {

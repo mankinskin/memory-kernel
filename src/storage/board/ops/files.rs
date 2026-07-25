@@ -4,22 +4,14 @@ use uuid::Uuid;
 
 use crate::storage::{
     index::RedbIndexStore,
-    schema::{
-        TABLE_BOARD_ACTIVE_INDEX,
-        TABLE_BOARD_ENTRIES,
-    },
+    schema::{TABLE_BOARD_ACTIVE_INDEX, TABLE_BOARD_ENTRIES},
 };
 
 use super::{
     super::{
-        BoardEntry,
-        BoardEntryStatus,
-        BoardError,
-        db_err,
-        serialize_entry,
+        BoardEntry, BoardEntryStatus, BoardError, db_err, serialize_entry,
     },
-    load_all_entries,
-    lookup_active_entry_id,
+    load_all_entries, lookup_active_entry_id,
 };
 
 impl RedbIndexStore {

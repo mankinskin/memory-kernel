@@ -1,5 +1,5 @@
 use super::*;
-use test_api::InteroperableArtifact;
+use crate::InteroperableArtifact;
 
 pub(super) fn resolve_target_git_root_or_block(
     target_workspace_root: &Path,
@@ -95,7 +95,7 @@ pub(super) fn collect_candidate_reference_files(
     files: &mut BTreeSet<PathBuf>,
 ) {
     match git_tracked_path_reference_files(git_root, resolved_source_path) {
-        Ok(found) =>
+        Ok(found) => {
             for file in found {
                 let candidate = git_root.join(file);
                 if is_persistent_move_reference_file(
@@ -106,9 +106,11 @@ pub(super) fn collect_candidate_reference_files(
                 ) {
                     files.insert(candidate);
                 }
-            },
-        Err(reason) =>
-            blockers.push(MoveBlocker::PathReferenceScanUnavailable { reason }),
+            }
+        },
+        Err(reason) => {
+            blockers.push(MoveBlocker::PathReferenceScanUnavailable { reason })
+        },
     }
 }
 
@@ -493,14 +495,17 @@ pub(super) fn recovery_hint_for_phase(
     phase: &MoveExecutionPhase
 ) -> &'static str {
     match phase {
-        MoveExecutionPhase::Planned | MoveExecutionPhase::Locked =>
-            "run resume_move to continue execution",
+        MoveExecutionPhase::Planned | MoveExecutionPhase::Locked => {
+            "run resume_move to continue execution"
+        },
         MoveExecutionPhase::Moved
         | MoveExecutionPhase::SourceScanned
-        | MoveExecutionPhase::TargetScanned =>
-            "run rollback_move for safety, or resume_move to retry",
-        MoveExecutionPhase::Validated | MoveExecutionPhase::RolledBack =>
-            "no recovery action needed",
+        | MoveExecutionPhase::TargetScanned => {
+            "run rollback_move for safety, or resume_move to retry"
+        },
+        MoveExecutionPhase::Validated | MoveExecutionPhase::RolledBack => {
+            "no recovery action needed"
+        },
     }
 }
 
@@ -859,7 +864,9 @@ mod persist_journal_contract_tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             steps: vec!["created move journal".to_string()],
-            rollback_steps: vec!["rename destination back to source".to_string()],
+            rollback_steps: vec![
+                "rename destination back to source".to_string(),
+            ],
             lock_paths: Vec::new(),
             migrated_board_entries: Vec::new(),
             rewritten_path_files: Vec::new(),
@@ -879,8 +886,9 @@ mod persist_journal_contract_tests {
         journal.entity_id = Uuid::nil();
         journal.source_store_root = PathBuf::new();
 
-        let error = persist_journal(store.path(), &journal)
-            .expect_err("non-compliant journal must be rejected at persistence");
+        let error = persist_journal(store.path(), &journal).expect_err(
+            "non-compliant journal must be rejected at persistence",
+        );
         match error {
             MoveError::InteroperabilityContract {
                 artifact_class,
@@ -895,7 +903,7 @@ mod persist_journal_contract_tests {
                     detail.contains("missing source store root"),
                     "unexpected detail: {detail}"
                 );
-            }
+            },
             other => panic!("unexpected error variant: {other:?}"),
         }
 

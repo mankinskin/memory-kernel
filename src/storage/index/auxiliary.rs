@@ -1,7 +1,4 @@
-use std::collections::{
-    HashSet,
-    VecDeque,
-};
+use std::collections::{HashSet, VecDeque};
 
 use rusqlite::params;
 use uuid::Uuid;
@@ -9,10 +6,7 @@ use uuid::Uuid;
 use crate::{
     error::StorageError,
     model::filesystem::{
-        PersistedScanRoot,
-        PolicyDecision,
-        ScanRoot,
-        ScanRootMetadata,
+        PersistedScanRoot, PolicyDecision, ScanRoot, ScanRootMetadata,
         ScanRootSource,
     },
 };
@@ -20,12 +14,7 @@ use crate::{
 use super::RedbIndexStore;
 use crate::storage::{
     indexed::LeaseInfo,
-    schema::{
-        TABLE_EDGES,
-        TABLE_LEASES,
-        TABLE_SCAN_ROOTS,
-        TABLE_TICKETS,
-    },
+    schema::{TABLE_EDGES, TABLE_LEASES, TABLE_SCAN_ROOTS, TABLE_TICKETS},
 };
 
 impl RedbIndexStore {
@@ -245,10 +234,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        model::filesystem::{
-            PolicyDecision,
-            ScanRootSource,
-        },
+        model::filesystem::{PolicyDecision, ScanRootSource},
         storage::index::RedbIndexStore,
     };
 

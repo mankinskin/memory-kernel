@@ -1,9 +1,5 @@
 use chrono::Utc;
-use rusqlite::{
-    Connection,
-    OptionalExtension,
-    params,
-};
+use rusqlite::{Connection, OptionalExtension, params};
 use uuid::Uuid;
 
 use crate::{
@@ -11,23 +7,14 @@ use crate::{
     storage::{
         index::RedbIndexStore,
         schema::{
-            TABLE_BOARD_ACTIVE_INDEX,
-            TABLE_BOARD_CONFIG,
-            TABLE_BOARD_ENTRIES,
+            TABLE_BOARD_ACTIVE_INDEX, TABLE_BOARD_CONFIG, TABLE_BOARD_ENTRIES,
         },
     },
 };
 
 use super::{
-    BOARD_CONFIG_KEY,
-    BoardConfig,
-    BoardEntry,
-    BoardEntryStatus,
-    BoardError,
-    db_err,
-    deserialize_config,
-    deserialize_entry,
-    serialize_config,
+    BOARD_CONFIG_KEY, BoardConfig, BoardEntry, BoardEntryStatus, BoardError,
+    db_err, deserialize_config, deserialize_entry, serialize_config,
     serialize_entry,
 };
 

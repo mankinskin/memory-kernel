@@ -18,10 +18,7 @@
 
 use std::{
     collections::BTreeSet,
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::{Path, PathBuf},
 };
 
 use crate::model::index_entry::ContentKind;

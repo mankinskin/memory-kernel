@@ -1,7 +1,4 @@
-use std::path::{
-    Path,
-    PathBuf,
-};
+use std::path::{Path, PathBuf};
 
 use chrono::Utc;
 use uuid::Uuid;
@@ -10,25 +7,16 @@ use crate::{
     error::StorageError,
     model::{
         edge::EdgeRecord,
-        filesystem::{
-            ParseDiagnostic,
-            ScanRoot,
-        },
+        filesystem::{ParseDiagnostic, ScanRoot},
         query::parse_query,
         schema_registry::SchemaRegistry,
     },
     storage::{
-        entity_fs::{
-            EntityFs,
-            EntityScanEntry,
-        },
+        entity_fs::{EntityFs, EntityScanEntry},
         index::RedbIndexStore,
         indexed::IndexedEntity,
         local_root::ensure_sqlite_index_root,
-        search::{
-            SearchResult,
-            TantivySearchIndex,
-        },
+        search::{SearchResult, TantivySearchIndex},
     },
 };
 
@@ -311,10 +299,10 @@ impl EntityStore {
                     continue;
                 }
 
-                match self.fs.load_scan_entry(
-                    candidate.path.clone(),
-                    candidate.id,
-                ) {
+                match self
+                    .fs
+                    .load_scan_entry(candidate.path.clone(), candidate.id)
+                {
                     Ok(Some(entry)) => {
                         self.integrate_entry(entry, reindex)?;
                         integrated += 1;
@@ -355,9 +343,7 @@ impl EntityStore {
     /// Load the per-entity manifest fingerprints recorded by the previous scan.
     /// A missing or unreadable/corrupt sidecar yields an empty map, which is
     /// safe: every entity is then treated as changed and re-integrated.
-    fn load_scan_fingerprints(
-        &self
-    ) -> std::collections::HashMap<Uuid, u128> {
+    fn load_scan_fingerprints(&self) -> std::collections::HashMap<Uuid, u128> {
         let Ok(content) = std::fs::read_to_string(self.scan_fingerprint_path())
         else {
             return std::collections::HashMap::new();
@@ -552,13 +538,7 @@ mod tests {
     fn scan_reindex_self_heals_stale_search_index_schema() {
         use crate::model::entity::EntityManifest;
         use serde_json::json;
-        use tantivy::schema::{
-            FAST,
-            STORED,
-            STRING,
-            Schema,
-            TEXT,
-        };
+        use tantivy::schema::{FAST, STORED, STRING, Schema, TEXT};
 
         let tmp = tempfile::tempdir().unwrap();
         let store = EntityStore::open(tmp.path(), test_fs()).unwrap();
@@ -846,7 +826,10 @@ mod tests {
                 .extra
                 .insert("title".into(), json!(format!("Entity {n}")));
             manifest.extra.insert("state".into(), json!("ready"));
-            store.fs.create(&manifest, &entity_dir, Some("body")).unwrap();
+            store
+                .fs
+                .create(&manifest, &entity_dir, Some("body"))
+                .unwrap();
             ids.push(id);
         }
 

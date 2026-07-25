@@ -1,19 +1,10 @@
-use std::collections::{
-    BTreeMap,
-    VecDeque,
-};
+use std::collections::{BTreeMap, VecDeque};
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
 use crate::error::SchemaValidationError;
 
-use super::{
-    edge::EdgeKindRule,
-    entity::EntityManifest,
-};
+use super::{edge::EdgeKindRule, entity::EntityManifest};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

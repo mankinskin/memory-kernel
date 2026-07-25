@@ -15,11 +15,7 @@ use chrono::Utc;
 use super::util::to_relative_slash;
 use crate::{
     model::{
-        index_entry::{
-            ContentKind,
-            IndexEntry,
-            IndexRelations,
-        },
+        index_entry::{ContentKind, IndexEntry, IndexRelations},
         index_sidecar::IndexSidecar,
     },
     storage::indexed::IndexedEntity,

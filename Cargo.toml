@@ -1,16 +1,22 @@
 [package]
-name = "memory-api"
+name = "memory-kernel"
 version = "0.1.0"
 edition = "2024"
-description = "Generic filesystem-backed entity storage: schema validation, SQLite indexing, Tantivy search, edge management, board coordination, and workspace resolution"
+description = "Generic filesystem-backed entity storage, indexing, search, and workspace coordination"
+
+[lib]
+name = "memory_kernel"
+path = "src/lib.rs"
+
+[workspace]
+resolver = "3"
 
 [features]
-## Expose `memory_api::testing` — generic sandbox primitives for integration
+## Expose `memory_kernel::testing` — generic sandbox primitives for integration
 ## tests.  Consumers add this to `[dev-dependencies]` only.
 testing = []
 
 [dependencies]
-test-api = { path = "../test-api" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"

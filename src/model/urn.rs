@@ -17,15 +17,9 @@
 //! trait defines the cross-store lookup interface store crates implement to
 //! turn a [`Urn`] into a concrete entity.
 
-use std::{
-    fmt,
-    str::FromStr,
-};
+use std::{fmt, str::FromStr};
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 

@@ -1,13 +1,9 @@
-use std::{
-    fs,
-    io::ErrorKind,
-    path::Path,
-};
+use std::{fs, io::ErrorKind, path::Path};
 
 use crate::error::StorageError;
 
 const GITIGNORE_HEADER: &str =
-    "# Excluded local index artifacts created by memory-api tools.";
+    "# Excluded local index artifacts created by memory-kernel tools.";
 
 pub fn ensure_sqlite_index_root(
     index_root: &Path,

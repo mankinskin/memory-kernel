@@ -62,10 +62,12 @@ impl std::fmt::Display for ParseGeneratedMarkdownError {
                 f,
                 "input is not a generated artifact (missing generated file comment)"
             ),
-            Self::MalformedEntryComment(line) =>
-                write!(f, "malformed generated entry comment: {line}"),
-            Self::NoEntriesFound =>
-                write!(f, "generated artifact contains no entry comments"),
+            Self::MalformedEntryComment(line) => {
+                write!(f, "malformed generated entry comment: {line}")
+            },
+            Self::NoEntriesFound => {
+                write!(f, "generated artifact contains no entry comments")
+            },
         }
     }
 }
@@ -284,9 +286,11 @@ fn parse_entry_marker_line(
     for token in attrs.split_whitespace() {
         if let Some(value) = token.strip_prefix("id=") {
             if value.is_empty() {
-                return Err(ParseGeneratedMarkdownError::MalformedEntryComment(
-                    line.to_string(),
-                ));
+                return Err(
+                    ParseGeneratedMarkdownError::MalformedEntryComment(
+                        line.to_string(),
+                    ),
+                );
             }
             id = Some(value.to_string());
         } else if let Some(value) = token.strip_prefix("slug=") {
@@ -422,12 +426,9 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::{
-        ParseGeneratedMarkdownError,
-        GeneratedMarkdownConfig,
-        GeneratedMarkdownSnippet,
-        parse_generated_artifact,
-        prepare_generated_output,
-        render_markdown_file,
+        GeneratedMarkdownConfig, GeneratedMarkdownSnippet,
+        ParseGeneratedMarkdownError, parse_generated_artifact,
+        prepare_generated_output, render_markdown_file,
     };
 
     fn rule_like_config() -> GeneratedMarkdownConfig<'static> {

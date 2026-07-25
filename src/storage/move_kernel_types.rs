@@ -1,5 +1,5 @@
 use super::*;
-use test_api::InteroperableArtifact;
+use crate::InteroperableArtifact;
 
 #[derive(Debug)]
 pub enum MoveError {
@@ -544,7 +544,9 @@ impl MoveJournal {
             return Ok(());
         }
         Err(MoveError::InteroperabilityContract {
-            artifact_class: <Self as InteroperableArtifact>::artifact_class(self),
+            artifact_class: <Self as InteroperableArtifact>::artifact_class(
+                self,
+            ),
             detail: gaps.join(", "),
         })
     }
@@ -566,7 +568,9 @@ mod interoperability_contract_tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             steps: vec!["created move journal".to_string()],
-            rollback_steps: vec!["rename destination back to source".to_string()],
+            rollback_steps: vec![
+                "rename destination back to source".to_string(),
+            ],
             lock_paths: Vec::new(),
             migrated_board_entries: Vec::new(),
             rewritten_path_files: Vec::new(),
@@ -605,7 +609,7 @@ mod interoperability_contract_tests {
                     detail.contains("missing authoritative operation identity"),
                     "unexpected detail: {detail}"
                 );
-            }
+            },
             other => panic!("unexpected error variant: {other:?}"),
         }
     }

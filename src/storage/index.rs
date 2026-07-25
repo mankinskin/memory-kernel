@@ -1,44 +1,23 @@
 use std::{
-    collections::{
-        HashMap,
-        HashSet,
-    },
-    path::{
-        Path,
-        PathBuf,
-    },
+    collections::{HashMap, HashSet},
+    path::{Path, PathBuf},
     sync::Mutex,
 };
 
-use rusqlite::{
-    Connection,
-    OpenFlags,
-    OptionalExtension,
-    params,
-};
+use rusqlite::{Connection, OpenFlags, OptionalExtension, params};
 use uuid::Uuid;
 
 use crate::{
     error::StorageError,
     model::edge::EdgeRecord,
     storage::schema::{
-        SCHEMA_VERSION,
-        TABLE_BOARD_ACTIVE_INDEX,
-        TABLE_BOARD_CONFIG,
-        TABLE_BOARD_ENTRIES,
-        TABLE_EDGES,
-        TABLE_LEASES,
-        TABLE_META,
-        TABLE_SCAN_ROOTS,
-        TABLE_TICKETS,
-        TABLE_WORKFLOW_FACTS,
+        SCHEMA_VERSION, TABLE_BOARD_ACTIVE_INDEX, TABLE_BOARD_CONFIG,
+        TABLE_BOARD_ENTRIES, TABLE_EDGES, TABLE_LEASES, TABLE_META,
+        TABLE_SCAN_ROOTS, TABLE_TICKETS, TABLE_WORKFLOW_FACTS,
     },
 };
 
-use super::indexed::{
-    IndexedEntity,
-    WorkflowFacts,
-};
+use super::indexed::{IndexedEntity, WorkflowFacts};
 
 /// SQLite-backed metadata index.
 ///

@@ -1,8 +1,5 @@
 use chrono::Utc;
-use serde_json::{
-    Value,
-    json,
-};
+use serde_json::{Value, json};
 use uuid::Uuid;
 
 use super::*;

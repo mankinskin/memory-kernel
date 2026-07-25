@@ -1,4 +1,4 @@
-//! Domain index generators for memory-api store domains.
+//! Domain index generators for memory-kernel store domains.
 //!
 //! Each sub-module provides a generator function that:
 //! 1. Reads the relevant domain store (tickets, specs, rules, audit findings, workspaces).
@@ -22,8 +22,5 @@ pub mod util;
 pub mod workspace;
 
 pub use ticket::generate_ticket_sidecar;
-pub use util::{
-    deterministic_uuid,
-    to_relative_slash,
-};
+pub use util::{deterministic_uuid, to_relative_slash};
 pub use workspace::generate_workspace_sidecar;

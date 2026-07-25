@@ -4,17 +4,11 @@
 //! This module resolves repo-local roots by walking upward from the current
 //! directory and falling back to a sibling hidden folder in the current repo.
 
-use std::path::{
-    Path,
-    PathBuf,
-};
+use std::path::{Path, PathBuf};
 
 use crate::{
     model::filesystem::ScanRoot,
-    workspace_policy::{
-        WorkspacePolicy,
-        load_workspace_policy,
-    },
+    workspace_policy::{WorkspacePolicy, load_workspace_policy},
 };
 
 pub const TICKET_INDEX_DIR: &str = ".ticket";
@@ -88,10 +82,12 @@ impl std::fmt::Display for WorkspacePathError {
                 f,
                 "failed to canonicalize workspace root '{input}': {source}"
             ),
-            Self::InvalidWindowsPrefix { input, detail } =>
-                write!(f, "invalid Windows path prefix for '{input}': {detail}"),
-            Self::UnrepresentablePath { input, detail } =>
-                write!(f, "unrepresentable path '{input}': {detail}"),
+            Self::InvalidWindowsPrefix { input, detail } => {
+                write!(f, "invalid Windows path prefix for '{input}': {detail}")
+            },
+            Self::UnrepresentablePath { input, detail } => {
+                write!(f, "unrepresentable path '{input}': {detail}")
+            },
         }
     }
 }
@@ -406,7 +402,7 @@ pub fn resolve_requested_store_root_from(
 /// Unlike [`resolve_local_root_from`], which only walks upward, this helper also
 /// prefers an existing hidden store nested *below* the execution root. This is
 /// required for stores that live inside a submodule (for example the
-/// `memory-api` workspace's `.memory-api` directory): running the tool from the
+/// `memory-kernel` workspace's `.memory-kernel` directory): running the tool from the
 /// repository root must reuse that nested store instead of creating a duplicate
 /// hidden directory at the root.
 ///
@@ -649,10 +645,12 @@ pub enum WorkspaceSource {
 impl WorkspaceSource {
     pub fn description(&self) -> String {
         match self {
-            Self::Discovered(path) =>
-                format!("discovered local .ticket ({})", path.display()),
-            Self::Default(path) =>
-                format!("default local .ticket ({})", path.display()),
+            Self::Discovered(path) => {
+                format!("discovered local .ticket ({})", path.display())
+            },
+            Self::Default(path) => {
+                format!("default local .ticket ({})", path.display())
+            },
         }
     }
 }

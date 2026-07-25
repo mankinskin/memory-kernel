@@ -11,15 +11,8 @@
 
 use std::path::Path;
 
-use globset::{
-    Glob,
-    GlobSet,
-    GlobSetBuilder,
-};
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use globset::{Glob, GlobSet, GlobSetBuilder};
+use serde::{Deserialize, Serialize};
 
 use crate::workspace::TICKET_INDEX_DIR;
 

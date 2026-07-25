@@ -16,11 +16,7 @@ use uuid::Uuid;
 
 use crate::model::{
     index_entry::{
-        ContentKind,
-        IndexEntry,
-        IndexRef,
-        IndexRelations,
-        RelationKind,
+        ContentKind, IndexEntry, IndexRef, IndexRelations, RelationKind,
     },
     index_sidecar::IndexSidecar,
 };

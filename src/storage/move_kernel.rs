@@ -23,19 +23,13 @@
 use std::{
     collections::BTreeSet,
     fs,
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::{Path, PathBuf},
     process::Command,
     time::Instant,
 };
 
 use chrono::Utc;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 use tracing::field::Empty;
 use uuid::Uuid;
 
@@ -43,16 +37,12 @@ use crate::storage::board::BoardEntry;
 
 const MOVE_LOCKS_DIR: &str = "move-locks";
 const MOVE_JOURNALS_DIR: &str = "move-journals";
-const MOVE_TRACE_TARGET: &str = "memory_api::storage::move_kernel";
+const MOVE_TRACE_TARGET: &str = "memory_kernel::storage::move_kernel";
 
 #[path = "move_kernel/internal.rs"]
 mod internal;
 use internal::*;
-pub use internal::{
-    collect_lock_paths,
-    load_journal,
-    persist_journal,
-};
+pub use internal::{collect_lock_paths, load_journal, persist_journal};
 /// Error type for the move kernel.
 ///
 /// Domain trait implementations map their own storage errors onto

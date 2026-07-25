@@ -7,29 +7,15 @@
 //! by a forced `scan(true)` reindex.
 
 use std::{
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::{Path, PathBuf},
     sync::mpsc,
-    time::{
-        Duration,
-        Instant,
-    },
+    time::{Duration, Instant},
 };
 
-use notify::{
-    Event,
-    RecommendedWatcher,
-    RecursiveMode,
-    Watcher,
-};
+use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use uuid::Uuid;
 
-use crate::{
-    error::StorageError,
-    storage::entity_store::EntityStore,
-};
+use crate::{error::StorageError, storage::entity_store::EntityStore};
 
 /// Opaque handle that keeps the filesystem watcher alive.
 ///
@@ -190,10 +176,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        model::filesystem::{
-            EntityFolderConfig,
-            ScanRoot,
-        },
+        model::filesystem::{EntityFolderConfig, ScanRoot},
         storage::entity_fs::EntityFs,
     };
 

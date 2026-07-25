@@ -1,4 +1,4 @@
-//! TOON sidecar format for memory-api store index artifacts.
+//! TOON sidecar format for memory-kernel store index artifacts.
 //!
 //! An [`IndexSidecar`] is the compact machine-readable companion emitted
 //! alongside every human-readable `README.md` index. It lives at a fixed
@@ -29,24 +29,12 @@
 //! - every entry's stored `digest` matches a fresh `compute_digest()` call
 //! - no duplicate `id` values within the sidecar
 
-use std::{
-    collections::HashSet,
-    path::Path,
-};
+use std::{collections::HashSet, path::Path};
 
-use chrono::{
-    DateTime,
-    Utc,
-};
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
-use super::index_entry::{
-    ContentKind,
-    IndexEntry,
-};
+use super::index_entry::{ContentKind, IndexEntry};
 
 /// Version token stored in every sidecar. Bump when the schema changes in a
 /// backward-incompatible way. Readers should warn (not fail) on unknown
@@ -134,7 +122,7 @@ impl std::fmt::Display for SidecarValidationIssue {
 ///
 /// Write path:
 /// ```no_run
-/// # use memory_api::model::index_sidecar::IndexSidecar;
+/// # use memory_kernel::model::index_sidecar::IndexSidecar;
 /// # let sidecar = IndexSidecar::default();
 /// let json = serde_json::to_string(&sidecar).unwrap();
 /// let toon = toon_format::encode_default(&serde_json::from_str::<serde_json::Value>(&json).unwrap()).unwrap();
@@ -143,7 +131,7 @@ impl std::fmt::Display for SidecarValidationIssue {
 ///
 /// Read path:
 /// ```no_run
-/// # use memory_api::model::index_sidecar::IndexSidecar;
+/// # use memory_kernel::model::index_sidecar::IndexSidecar;
 /// let toon = std::fs::read_to_string(".ticket/index.toon").unwrap();
 /// let json_value = toon_format::decode_default(&toon).unwrap();
 /// let sidecar: IndexSidecar = serde_json::from_value(json_value).unwrap();
@@ -354,10 +342,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::*;
-    use crate::model::index_entry::{
-        IndexEntry,
-        IndexRelations,
-    };
+    use crate::model::index_entry::{IndexEntry, IndexRelations};
 
     fn make_entry(
         id: Uuid,

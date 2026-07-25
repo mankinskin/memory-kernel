@@ -1,26 +1,13 @@
 use std::{
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::{Path, PathBuf},
     thread,
     time::Duration,
 };
 
 use tantivy::{
-    Index,
-    IndexWriter,
-    TantivyDocument,
-    TantivyError,
-    Term,
+    Index, IndexWriter, TantivyDocument, TantivyError, Term,
     schema::{
-        FAST,
-        Field,
-        INDEXED,
-        STORED,
-        STRING,
-        Schema,
-        TEXT,
+        FAST, Field, INDEXED, STORED, STRING, Schema, TEXT,
         Value as TantivyValue,
     },
 };
@@ -28,10 +15,7 @@ use uuid::Uuid;
 
 use crate::{
     error::StorageError,
-    model::query::{
-        Expr,
-        ValueExpr,
-    },
+    model::query::{Expr, ValueExpr},
 };
 
 #[derive(Debug)]
@@ -562,13 +546,7 @@ impl TantivySearchIndex {
     ) -> Result<Vec<SearchResult>, StorageError> {
         use tantivy::{
             collector::TopDocs,
-            query::{
-                AllQuery,
-                BooleanQuery,
-                Occur,
-                Query,
-                TermQuery,
-            },
+            query::{AllQuery, BooleanQuery, Occur, Query, TermQuery},
         };
 
         // Catch panics from corrupt on-disk segments so the read can be retried
