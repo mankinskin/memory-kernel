@@ -1,0 +1,10 @@
+{
+  "id": "vt-transport-harness-spec",
+  "title": "Canonical transport-harness spec in memory-kernel",
+  "detail": "Canonical transport-harness spec authored in the memory-kernel .spec store; refs validate clean and health reports no issues.",
+  "links": {
+    "spec_ids": [
+      "e5294ae5-6bff-44dc-81a9-24a44615b775"
+    ]
+  }
+}

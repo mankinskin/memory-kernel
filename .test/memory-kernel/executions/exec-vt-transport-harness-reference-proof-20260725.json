@@ -1,0 +1,20 @@
+{
+  "id": "exec-vt-transport-harness-reference-proof-20260725",
+  "validation_spec_id": "vt-transport-harness-reference-proof",
+  "outcome": "passed",
+  "executed_at": "2026-07-25T17:36:24.849130500Z",
+  "detail": "cli=4 tests ok; mcp=3 ok; http=3 ok; --all-features=6 unit + 8 integration ok; default slim build ok; cargo tree default shows no clap/axum/rmcp/tokio; clippy --all-features --tests clean; reference builds cli,mcp,http via git dep. Also fixed harness write_output JSON branch (was appending quoted \"\\n\" instead of a newline byte); added guarding unit test.",
+  "links": {
+    "spec_ids": [
+      "e5294ae5-6bff-44dc-81a9-24a44615b775"
+    ],
+    "ticket_ids": [
+      "2cc7680c-7f19-4ad7-8658-29920e60ce1c"
+    ]
+  },
+  "provenance": {
+    "domain": "transport-harness",
+    "operation": "reference-proof",
+    "run_id": "dc58ae27-89a2-4133-8124-8225fd8417b7"
+  }
+}

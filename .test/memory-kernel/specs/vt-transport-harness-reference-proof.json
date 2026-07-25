@@ -1,0 +1,13 @@
+{
+  "id": "vt-transport-harness-reference-proof",
+  "title": "Reference-proof integration tests across CLI/MCP/HTTP",
+  "detail": "cargo test -p transport-harness per-feature and --all-features; describe op across CLI/MCP/HTTP asserting success output + domain error envelope + HTTP 404 status mapping; default=[] slim build + no transport deps.",
+  "links": {
+    "spec_ids": [
+      "e5294ae5-6bff-44dc-81a9-24a44615b775"
+    ],
+    "ticket_ids": [
+      "2cc7680c-7f19-4ad7-8658-29920e60ce1c"
+    ]
+  }
+}

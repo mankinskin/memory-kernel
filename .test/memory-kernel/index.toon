@@ -1,0 +1,9 @@
+total_executions: 2
+total_benchmarks: 0
+last_run: "2026-07-25T17:36:24.849130500Z"
+validation_groups[2]{validation_spec_id,total,passed,failed,blocked,latest_outcome,source_path,test_id,domain,operation,transport,run_id,last_duration_ms,min_duration_ms,median_duration_ms,max_duration_ms}:
+  "vt-transport-harness-reference-proof",1,1,0,0,passed,null,null,"transport-harness","reference-proof",null,"dc58ae27-89a2-4133-8124-8225fd8417b7",null,null,null,null
+  "vt-transport-harness-spec",1,1,0,0,passed,null,null,"transport-harness","spec-authoring",null,"dc58ae27-89a2-4133-8124-8225fd8417b7",null,null,null,null
+benchmark_groups[0]:
+issues[0]:
+slow[0]:

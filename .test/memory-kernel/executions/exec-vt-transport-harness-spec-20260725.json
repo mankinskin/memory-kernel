@@ -1,0 +1,17 @@
+{
+  "id": "exec-vt-transport-harness-spec-20260725",
+  "validation_spec_id": "vt-transport-harness-spec",
+  "outcome": "passed",
+  "executed_at": "2026-07-25T17:25:38.194146700Z",
+  "detail": "spec refs validate -> valid (0 refs); spec health -> 0 issues; canonical spec owns responsibilities/non-goals/features/API/guards; context-engine spec 53a23ab2 and contract doc slimmed to references.",
+  "links": {
+    "spec_ids": [
+      "e5294ae5-6bff-44dc-81a9-24a44615b775"
+    ]
+  },
+  "provenance": {
+    "domain": "transport-harness",
+    "operation": "spec-authoring",
+    "run_id": "dc58ae27-89a2-4133-8124-8225fd8417b7"
+  }
+}

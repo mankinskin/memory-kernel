@@ -96,8 +96,10 @@ pub fn write_output(
 ) -> Result<(), HarnessError> {
     match output {
         Output::Text(text) => writeln!(writer, "{text}")?,
-        Output::Json(value) => serde_json::to_writer(&mut writer, value)
-            .and_then(|()| serde_json::to_writer(&mut writer, "\n"))?,
+        Output::Json(value) => {
+            serde_json::to_writer(&mut writer, value)?;
+            writer.write_all(b"\n")?;
+        }
     }
     Ok(())
 }
@@ -274,6 +276,17 @@ mod tests {
         write_output(&mut bytes, &Output::Text("ready".into()))
             .expect("text output should write");
         assert_eq!(bytes, b"ready\n");
+    }
+
+    #[test]
+    fn write_output_appends_one_real_newline_to_json() {
+        let mut bytes = Vec::new();
+        write_output(
+            &mut bytes,
+            &Output::Json(serde_json::json!({"status": "ready"})),
+        )
+        .expect("json output should write");
+        assert_eq!(bytes, b"{\"status\":\"ready\"}\n");
     }
 
     #[test]
