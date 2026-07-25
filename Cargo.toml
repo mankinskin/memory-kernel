@@ -9,6 +9,7 @@ name = "memory_kernel"
 path = "src/lib.rs"
 
 [workspace]
+members = ["crates/transport-harness"]
 resolver = "3"
 
 [features]

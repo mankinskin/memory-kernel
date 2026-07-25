@@ -17,6 +17,24 @@ board APIs. The `InteroperableArtifact` contract is now owned by this package
 because move journals are kernel artifacts; domain-specific interoperability
 traits remain with their domains.
 
+## Transport harness
+
+The workspace also publishes the sibling `transport-harness` crate. Workflow
+domain binaries enable only the transports they expose:
+
+```toml
+transport-harness = { path = "../memory-kernel/crates/transport-harness", optional = true, default-features = false }
+
+[features]
+cli = ["dep:transport-harness", "transport-harness/cli"]
+mcp = ["dep:transport-harness", "transport-harness/mcp"]
+http = ["dep:transport-harness", "transport-harness/http"]
+```
+
+The harness owns CLI parsing and output, MCP stdio startup, HTTP listener
+startup, tracing, and transport error normalization. Domain crates retain
+their command dispatch, MCP `ServerHandler`, and HTTP `Router` registration.
+
 ## Versioning
 
 This package follows semantic versioning. Additive public APIs are minor
@@ -33,4 +51,5 @@ cargo clippy --all-targets --all-features -- -D warnings
 ```
 
 The extracted history comes from `memory-api/crates/memory-api`. Per-domain
-APIs and transport binaries intentionally do not belong in this repository.
+APIs and transport binaries intentionally do not belong in this repository;
+only their transport-neutral startup harness is shared here.
