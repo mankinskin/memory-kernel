@@ -167,6 +167,9 @@ impl RedbIndexStore {
         ttl_secs: u64,
         intent: &str,
         owned_files: Vec<String>,
+        session_id: Option<String>,
+        worktree_path: Option<String>,
+        branch: Option<String>,
     ) -> Result<BoardEntry, BoardError> {
         self.with_db_ext(|conn| {
             let now = Utc::now();
@@ -210,6 +213,28 @@ impl RedbIndexStore {
                     ticket_id,
                     agent_id: agent_id.to_string(),
                 });
+            }
+
+            if let Some(requested_worktree_path) = worktree_path.as_deref() {
+                if session_id.is_none() {
+                    conn.execute_batch("ROLLBACK;").ok();
+                    return Err(BoardError::WorktreeRequiresSession {
+                        worktree_path: requested_worktree_path.to_string(),
+                    });
+                }
+
+                if let Some(existing) = all_entries.iter().find(|entry| {
+                    entry.status == BoardEntryStatus::Active
+                        && entry.worktree_path.as_deref() == Some(requested_worktree_path)
+                        && entry.session_id != session_id
+                }) {
+                    conn.execute_batch("ROLLBACK;").ok();
+                    return Err(BoardError::WorktreeConflict {
+                        worktree_path: requested_worktree_path.to_string(),
+                        conflicting_agent: existing.agent_id.clone(),
+                        conflicting_ticket: existing.ticket_id,
+                    });
+                }
             }
 
             if !owned_files.is_empty() {
@@ -268,6 +293,9 @@ impl RedbIndexStore {
                 status: BoardEntryStatus::Active,
                 handoff_reason: None,
                 completed_at: None,
+                session_id,
+                worktree_path,
+                branch,
             };
 
             let entry_bytes = serialize_entry(&new_entry)?;

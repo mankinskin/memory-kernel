@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::{Duration, Utc};
 
@@ -6,8 +6,8 @@ use crate::storage::index::RedbIndexStore;
 
 use super::{
     super::{
-        BoardEntry, BoardEntryStatus, BoardError, BoardHistorySnapshot,
-        BoardSnapshot,
+        ActiveWorktree, BoardEntry, BoardEntryStatus, BoardError,
+        BoardHistorySnapshot, BoardSnapshot,
     },
     load_all_entries, read_board_config,
 };
@@ -66,6 +66,58 @@ impl RedbIndexStore {
                 }
             }
 
+            let mut worktree_entries: BTreeMap<String, Vec<&BoardEntry>> = BTreeMap::new();
+            for entry in &entries {
+                if let Some(worktree_path) = &entry.worktree_path {
+                    worktree_entries
+                        .entry(worktree_path.clone())
+                        .or_default()
+                        .push(entry);
+                }
+            }
+            let active_worktrees = worktree_entries
+                .into_iter()
+                .map(|(worktree_path, entries)| {
+                    let branches: BTreeSet<String> = entries
+                        .iter()
+                        .filter_map(|entry| entry.branch.clone())
+                        .collect();
+                    let session_ids: Vec<String> = entries
+                        .iter()
+                        .filter_map(|entry| entry.session_id.clone())
+                        .collect::<BTreeSet<_>>()
+                        .into_iter()
+                        .collect();
+                    let agent_ids = entries
+                        .iter()
+                        .map(|entry| entry.agent_id.clone())
+                        .collect::<BTreeSet<_>>()
+                        .into_iter()
+                        .collect();
+                    let ticket_ids = entries
+                        .iter()
+                        .map(|entry| entry.ticket_id)
+                        .collect::<BTreeSet<_>>()
+                        .into_iter()
+                        .collect();
+                    let entry_ids = entries
+                        .iter()
+                        .map(|entry| entry.entry_id)
+                        .collect::<BTreeSet<_>>()
+                        .into_iter()
+                        .collect();
+                    ActiveWorktree {
+                        worktree_path,
+                        branch: branches.into_iter().next(),
+                        conflicted: session_ids.len() > 1,
+                        session_ids,
+                        agent_ids,
+                        ticket_ids,
+                        entry_ids,
+                    }
+                })
+                .collect();
+
             let warnings = entries
                 .iter()
                 .filter(|entry| entry.status == BoardEntryStatus::Stale)
@@ -96,6 +148,7 @@ impl RedbIndexStore {
                 conflict_count,
                 wip_limit_reached: active_count + stale_count >= config.max_wip,
                 file_ownership,
+                active_worktrees,
                 warnings,
             })
         })

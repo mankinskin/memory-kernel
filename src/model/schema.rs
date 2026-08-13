@@ -55,6 +55,15 @@ impl EntityTypeSchema {
         &self,
         manifest: &EntityManifest,
     ) -> Result<(), SchemaValidationError> {
+        if let Some(state) = manifest.extra.get("state").and_then(|value| value.as_str()) {
+            if !self.states.iter().any(|allowed| allowed == state) {
+                return Err(SchemaValidationError::OffSchemaState {
+                    state: state.to_owned(),
+                    allowed: self.states.clone(),
+                });
+            }
+        }
+
         for (name, def) in &self.fields {
             if def.required && !manifest.extra.contains_key(name) {
                 return Err(SchemaValidationError::MissingRequiredField(
