@@ -38,7 +38,7 @@ impl RedbIndexStore {
                     )
                 })
                 .collect();
-            let mut entries = current_entries;
+            let mut entries = current_entries.clone();
             entries.sort_by(|left, right| right.checked_in_at.cmp(&left.checked_in_at));
 
             let active_count = entries
@@ -67,7 +67,7 @@ impl RedbIndexStore {
             }
 
             let mut worktree_entries: BTreeMap<String, Vec<&BoardEntry>> = BTreeMap::new();
-            for entry in &entries {
+            for entry in &current_entries {
                 if let Some(worktree_path) = &entry.worktree_path {
                     worktree_entries
                         .entry(worktree_path.clone())
@@ -78,37 +78,25 @@ impl RedbIndexStore {
             let active_worktrees = worktree_entries
                 .into_iter()
                 .map(|(worktree_path, entries)| {
-                    let branches: BTreeSet<String> = entries
+                    let branch = entries
                         .iter()
                         .filter_map(|entry| entry.branch.clone())
-                        .collect();
-                    let session_ids: Vec<String> = entries
-                        .iter()
-                        .filter_map(|entry| entry.session_id.clone())
-                        .collect::<BTreeSet<_>>()
-                        .into_iter()
-                        .collect();
-                    let agent_ids = entries
-                        .iter()
-                        .map(|entry| entry.agent_id.clone())
-                        .collect::<BTreeSet<_>>()
-                        .into_iter()
-                        .collect();
-                    let ticket_ids = entries
-                        .iter()
-                        .map(|entry| entry.ticket_id)
-                        .collect::<BTreeSet<_>>()
-                        .into_iter()
-                        .collect();
-                    let entry_ids = entries
-                        .iter()
-                        .map(|entry| entry.entry_id)
-                        .collect::<BTreeSet<_>>()
-                        .into_iter()
-                        .collect();
+                        .next();
+                    let session_ids: Vec<String> = dedup_in_order(
+                        entries
+                            .iter()
+                            .filter_map(|entry| entry.session_id.clone()),
+                    );
+                    let agent_ids: Vec<String> = dedup_in_order(
+                        entries.iter().map(|entry| entry.agent_id.clone()),
+                    );
+                    let ticket_ids =
+                        dedup_in_order(entries.iter().map(|entry| entry.ticket_id));
+                    let entry_ids =
+                        dedup_in_order(entries.iter().map(|entry| entry.entry_id));
                     ActiveWorktree {
                         worktree_path,
-                        branch: branches.into_iter().next(),
+                        branch,
                         conflicted: session_ids.len() > 1,
                         session_ids,
                         agent_ids,
@@ -209,6 +197,20 @@ impl RedbIndexStore {
             })
         })
     }
+}
+
+fn dedup_in_order<T>(items: impl Iterator<Item = T>) -> Vec<T>
+where
+    T: Clone + Ord,
+{
+    let mut seen = BTreeSet::new();
+    let mut ordered = Vec::new();
+    for item in items {
+        if seen.insert(item.clone()) {
+            ordered.push(item);
+        }
+    }
+    ordered
 }
 
 fn effective_completed_at(entry: &BoardEntry) -> chrono::DateTime<Utc> {
