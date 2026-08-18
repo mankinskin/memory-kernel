@@ -5,6 +5,7 @@ pub mod index;
 pub mod indexed;
 pub mod local_root;
 pub mod move_kernel;
+pub mod open_or_init;
 pub mod schema;
 pub mod search;
 pub mod watcher;
@@ -22,4 +23,5 @@ pub use move_kernel::{
     MoveOutcome, MovePathRewrite, MovePlan, MoveReferenceDirection,
     MoveReferenceVisibility, MoveReferences, MoveResult,
 };
+pub use open_or_init::{NotFoundError, Opened, open_or_init};
 pub use watcher::{WatchHandle, run_watch_loop};

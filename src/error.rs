@@ -123,6 +123,12 @@ pub enum StorageError {
     Other(String),
 }
 
+impl crate::storage::NotFoundError for StorageError {
+    fn is_workspace_not_found(&self) -> bool {
+        matches!(self, StorageError::WorkspaceNotFound { .. })
+    }
+}
+
 /// Structured errors for the canonical `TaskCommand` agent protocol.
 ///
 /// Error codes map directly to the `code` field in the structured error envelope,
