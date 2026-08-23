@@ -5,6 +5,7 @@ pub mod generated_markdown;
 pub mod index_generator;
 pub mod interoperability;
 pub mod model;
+pub mod query;
 pub mod runtime;
 pub mod storage;
 pub mod workspace;
