@@ -14,7 +14,7 @@ use std::path::Path;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::{Deserialize, Serialize};
 
-use crate::workspace::TICKET_INDEX_DIR;
+use crate::workspace::{TICKET_INDEX_DIR, normalize_slashes};
 
 /// Policy file name, resolved under `<workspace_root>/.ticket/`.
 pub const WORKSPACE_POLICY_FILE: &str = "workspace-policy.toml";
@@ -156,6 +156,7 @@ pub fn load_workspace_policy(workspace_root: &Path) -> WorkspacePolicy {
     let policy_path = workspace_root
         .join(TICKET_INDEX_DIR)
         .join(WORKSPACE_POLICY_FILE);
+    let trace_path = normalize_slashes(&policy_path);
 
     match std::fs::read_to_string(&policy_path) {
         Ok(contents) => match toml::from_str::<WorkspacePolicy>(&contents) {
@@ -165,7 +166,7 @@ pub fn load_workspace_policy(workspace_root: &Path) -> WorkspacePolicy {
             },
             Err(error) => {
                 tracing::warn!(
-                    path = %policy_path.display(),
+                    path = %trace_path,
                     %error,
                     "failed to parse workspace-policy.toml; using compatibility-mode defaults"
                 );
@@ -174,7 +175,7 @@ pub fn load_workspace_policy(workspace_root: &Path) -> WorkspacePolicy {
         },
         Err(_) => {
             tracing::warn!(
-                path = %policy_path.display(),
+                path = %trace_path,
                 "no .ticket/workspace-policy.toml found; using compatibility-mode discovery (descendants + ancestors). Add an explicit policy to control scan-root inclusion."
             );
             WorkspacePolicy::compatibility_default()
@@ -390,5 +391,14 @@ ignore_markers = [".skip"]
             ..WorkspacePolicy::default()
         };
         assert!(policy.matches_ignore(&PathBuf::from("fixtures/nested")));
+    }
+
+    #[test]
+    fn policy_trace_path_uses_forward_slashes() {
+        let path = PathBuf::from(r"workspace\.ticket\workspace-policy.toml");
+        assert_eq!(
+            normalize_slashes(&path),
+            "workspace/.ticket/workspace-policy.toml"
+        );
     }
 }
