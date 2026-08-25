@@ -103,6 +103,25 @@ fn resolve_requested_store_root_from_normalizes_explicit_workspace_root() {
 }
 
 #[test]
+fn explicit_workspace_does_not_fall_back_to_parent_store() {
+    let dir = tempdir().unwrap();
+    let parent = dir.path().join("meta-workspace");
+    let consumer = parent.join("workflow-minimal-demo");
+    std::fs::create_dir_all(parent.join(".ticket")).unwrap();
+    std::fs::create_dir_all(&consumer).unwrap();
+
+    let resolved = resolve_requested_store_root_from(
+        None,
+        Some(&consumer),
+        None,
+        Some(&parent),
+        ".ticket",
+    );
+
+    assert_eq!(resolved, consumer.join(".ticket"));
+}
+
+#[test]
 fn resolve_requested_store_root_from_prefers_explicit_store_root() {
     let dir = tempdir().unwrap();
     let repo = dir.path().join("repo");
@@ -167,6 +186,54 @@ fn resolve_requested_store_root_from_falls_back_to_local_discovery() {
     );
 
     assert_eq!(resolved, repo.join(".ticket"));
+}
+
+#[test]
+fn consumer_resolver_rejects_ambiguous_superproject() {
+    let dir = tempdir().unwrap();
+    let superproject = dir.path().join("meta-workspace");
+    let demo = superproject.join("minimal-demo");
+    let example = superproject.join("context-engine");
+    std::fs::create_dir_all(demo.join(".ticket")).unwrap();
+    std::fs::create_dir_all(example.join(".ticket")).unwrap();
+
+    let error = resolve_consumer_store_root_from(
+        None,
+        None,
+        None,
+        Some(&superproject),
+        ".ticket",
+    )
+    .unwrap_err();
+
+    assert_eq!(
+        error,
+        ConsumerWorkspaceError::AmbiguousSuperproject {
+            workspace: superproject,
+            stores: vec![example.join(".ticket"), demo.join(".ticket")],
+        },
+    );
+}
+
+#[test]
+fn consumer_resolver_allows_explicit_consumer_workspace() {
+    let dir = tempdir().unwrap();
+    let superproject = dir.path().join("meta-workspace");
+    let demo = superproject.join("minimal-demo");
+    let example = superproject.join("context-engine");
+    std::fs::create_dir_all(demo.join(".ticket")).unwrap();
+    std::fs::create_dir_all(example.join(".ticket")).unwrap();
+
+    let resolved = resolve_consumer_store_root_from(
+        None,
+        Some(&demo),
+        None,
+        Some(&superproject),
+        ".ticket",
+    )
+    .unwrap();
+
+    assert_eq!(resolved, demo.join(".ticket"));
 }
 
 #[test]

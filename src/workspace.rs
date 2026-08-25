@@ -72,6 +72,36 @@ pub enum WorkspacePathError {
     },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConsumerWorkspaceError {
+    AmbiguousSuperproject {
+        workspace: PathBuf,
+        stores: Vec<PathBuf>,
+    },
+}
+
+impl std::fmt::Display for ConsumerWorkspaceError {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        match self {
+            Self::AmbiguousSuperproject { workspace, stores } => write!(
+                f,
+                "workspace '{}' contains multiple consumer stores ({}); select a consumer workspace explicitly",
+                workspace.display(),
+                stores
+                    .iter()
+                    .map(|store| store.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ConsumerWorkspaceError {}
+
 impl std::fmt::Display for WorkspacePathError {
     fn fmt(
         &self,
@@ -383,7 +413,13 @@ pub fn resolve_requested_store_root_from(
     }
 
     if let Some(path) = explicit_workspace_root {
-        return resolve_store_root_from(path, dir_name);
+        let workspace = normalize_working_dir_path(start_dir(path));
+        if workspace.file_name().and_then(|name| name.to_str())
+            == Some(dir_name)
+        {
+            return workspace;
+        }
+        return workspace.join(dir_name);
     }
 
     if let Some(path) = env_store_root {
@@ -395,6 +431,57 @@ pub fn resolve_requested_store_root_from(
     }
 
     PathBuf::from(dir_name)
+}
+
+/// Resolve a consumer store without silently selecting a sibling workspace
+/// from a superproject directory.
+///
+/// Explicit store, workspace, and environment selections preserve the existing
+/// precedence order. An ambient invocation is valid only when the current
+/// directory has its own store or contains at most one descendant store.
+pub fn resolve_consumer_store_root_from(
+    explicit_store_root: Option<&Path>,
+    explicit_workspace_root: Option<&Path>,
+    env_store_root: Option<&Path>,
+    cwd: Option<&Path>,
+    dir_name: &str,
+) -> Result<PathBuf, ConsumerWorkspaceError> {
+    if explicit_store_root.is_some()
+        || explicit_workspace_root.is_some()
+        || env_store_root.is_some()
+    {
+        return Ok(resolve_requested_store_root_from(
+            explicit_store_root,
+            explicit_workspace_root,
+            env_store_root,
+            cwd,
+            dir_name,
+        ));
+    }
+
+    let Some(cwd) = cwd else {
+        return Ok(PathBuf::from(dir_name));
+    };
+    let workspace = normalize_working_dir_path(start_dir(cwd));
+    if workspace.join(dir_name).is_dir() {
+        return Ok(workspace.join(dir_name));
+    }
+
+    let stores = find_descendant_store_roots_from(&workspace, dir_name);
+    if stores.len() > 1 {
+        return Err(ConsumerWorkspaceError::AmbiguousSuperproject {
+            workspace,
+            stores,
+        });
+    }
+
+    Ok(resolve_requested_store_root_from(
+        None,
+        None,
+        None,
+        Some(cwd),
+        dir_name,
+    ))
 }
 
 /// Resolve a session-style store root relative to the tool execution directory.
