@@ -544,6 +544,25 @@ pub fn resolve_requested_store_root_for_initialization_from(
     resolve_store_root_for_initialization_from(root, dir_name)
 }
 
+/// Resolve a consumer store using the current working directory as `cwd`.
+///
+/// See [`resolve_consumer_store_root_from`] for resolution semantics.
+pub fn resolve_consumer_store_root(
+    explicit_store_root: Option<&Path>,
+    explicit_workspace_root: Option<&Path>,
+    env_store_root: Option<&Path>,
+    dir_name: &str,
+) -> Result<PathBuf, ConsumerWorkspaceError> {
+    let cwd = working_dir();
+    resolve_consumer_store_root_from(
+        explicit_store_root,
+        explicit_workspace_root,
+        env_store_root,
+        cwd.as_deref(),
+        dir_name,
+    )
+}
+
 /// Resolve a consumer store without silently selecting a sibling workspace
 /// from a superproject directory.
 ///
