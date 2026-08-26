@@ -64,6 +64,10 @@ pub enum ContentKind {
     Rule,
     /// A test case or test plan entry.
     Test,
+    /// A durable agent session record.
+    Session,
+    /// Feedback attached to a workspace entity.
+    Feedback,
     /// A finding produced by an audit pass.
     AuditFinding,
     /// A workspace-level summary entry (e.g. the workspace root index).

@@ -13,6 +13,28 @@ use crate::{
 
 pub const TICKET_INDEX_DIR: &str = ".ticket";
 
+pub const CANONICAL_STORES_DIR: &str = ".workflow-tools";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StoreRootDiagnostic {
+    LegacyStore {
+        domain: String,
+        legacy_path: PathBuf,
+        canonical_path: PathBuf,
+    },
+    BothLayoutsPresent {
+        domain: String,
+        legacy_path: PathBuf,
+        canonical_path: PathBuf,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StoreRootResolution {
+    pub store_root: PathBuf,
+    pub diagnostics: Vec<StoreRootDiagnostic>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InvalidWorkspaceSelector {
     value: String,
@@ -342,9 +364,8 @@ pub fn find_local_root_from(
 ) -> Option<PathBuf> {
     let mut dir = start_dir(start);
     loop {
-        let candidate = dir.join(dir_name);
-        if candidate.is_dir() {
-            return Some(candidate);
+        if let Some(store_root) = find_store_at_workspace(dir, dir_name) {
+            return Some(store_root);
         }
         match dir.parent() {
             Some(parent) => dir = parent,
@@ -371,18 +392,42 @@ pub fn resolve_store_root_from(
     start: &Path,
     dir_name: &str,
 ) -> PathBuf {
+    resolve_store_root_from_with_diagnostics(start, dir_name).store_root
+}
+
+pub fn resolve_store_root_from_with_diagnostics(
+    start: &Path,
+    dir_name: &str,
+) -> StoreRootResolution {
     let normalized = normalize_working_dir_path(start);
-    if normalized.file_name().and_then(|name| name.to_str()) == Some(dir_name) {
-        return normalized;
+    if is_store_root(&normalized, dir_name) {
+        return resolve_store_root_at_workspace(
+            &resolve_workspace_root_from_store_root(&normalized, dir_name),
+            dir_name,
+        );
     }
 
     let dir = start_dir(&normalized);
-
-    if dir.file_name().and_then(|name| name.to_str()) == Some(dir_name) {
-        return dir.to_path_buf();
+    if is_store_root(dir, dir_name) {
+        return resolve_store_root_at_workspace(
+            &resolve_workspace_root_from_store_root(dir, dir_name),
+            dir_name,
+        );
     }
 
-    find_local_root_from(dir, dir_name).unwrap_or_else(|| dir.to_path_buf())
+    let mut workspace = dir;
+    loop {
+        if find_store_at_workspace(workspace, dir_name).is_some() {
+            return resolve_store_root_at_workspace(workspace, dir_name);
+        }
+        match workspace.parent() {
+            Some(parent) => workspace = parent,
+            None => return StoreRootResolution {
+                store_root: dir.to_path_buf(),
+                diagnostics: Vec::new(),
+            },
+        }
+    }
 }
 
 pub fn resolve_requested_store_root(
@@ -391,8 +436,23 @@ pub fn resolve_requested_store_root(
     env_store_root: Option<&Path>,
     dir_name: &str,
 ) -> PathBuf {
+    resolve_requested_store_root_with_diagnostics(
+        explicit_store_root,
+        explicit_workspace_root,
+        env_store_root,
+        dir_name,
+    )
+    .store_root
+}
+
+pub fn resolve_requested_store_root_with_diagnostics(
+    explicit_store_root: Option<&Path>,
+    explicit_workspace_root: Option<&Path>,
+    env_store_root: Option<&Path>,
+    dir_name: &str,
+) -> StoreRootResolution {
     let cwd = working_dir();
-    resolve_requested_store_root_from(
+    resolve_requested_store_root_from_with_diagnostics(
         explicit_store_root,
         explicit_workspace_root,
         env_store_root,
@@ -408,29 +468,80 @@ pub fn resolve_requested_store_root_from(
     cwd: Option<&Path>,
     dir_name: &str,
 ) -> PathBuf {
+    resolve_requested_store_root_from_with_diagnostics(
+        explicit_store_root,
+        explicit_workspace_root,
+        env_store_root,
+        cwd,
+        dir_name,
+    )
+    .store_root
+}
+
+pub fn resolve_requested_store_root_from_with_diagnostics(
+    explicit_store_root: Option<&Path>,
+    explicit_workspace_root: Option<&Path>,
+    env_store_root: Option<&Path>,
+    cwd: Option<&Path>,
+    dir_name: &str,
+) -> StoreRootResolution {
     if let Some(path) = explicit_store_root {
-        return resolve_store_root_from(path, dir_name);
+        return resolve_store_root_from_with_diagnostics(path, dir_name);
     }
 
     if let Some(path) = explicit_workspace_root {
         let workspace = normalize_working_dir_path(start_dir(path));
-        if workspace.file_name().and_then(|name| name.to_str())
-            == Some(dir_name)
-        {
-            return workspace;
-        }
-        return workspace.join(dir_name);
+        return resolve_store_root_at_workspace_read(&workspace, dir_name);
     }
 
     if let Some(path) = env_store_root {
-        return resolve_store_root_from(path, dir_name);
+        return resolve_store_root_from_with_diagnostics(path, dir_name);
     }
 
     if let Some(cwd) = cwd {
-        return resolve_local_root_from(cwd, dir_name);
+        if let Some(store_root) = find_local_root_from(cwd, dir_name) {
+            let workspace = resolve_workspace_root_from_store_root(&store_root, dir_name);
+            return resolve_store_root_at_workspace(&workspace, dir_name);
+        }
+        return StoreRootResolution {
+            store_root: start_dir(cwd).join(dir_name),
+            diagnostics: Vec::new(),
+        };
     }
 
-    PathBuf::from(dir_name)
+    StoreRootResolution {
+        store_root: PathBuf::from(dir_name),
+        diagnostics: Vec::new(),
+    }
+}
+
+/// Resolve a canonical target for store initialization or writes.
+///
+/// Unlike the compatibility read resolvers, this never returns a legacy
+/// hidden-store path.
+pub fn resolve_store_root_for_initialization_from(
+    workspace_root: &Path,
+    dir_name: &str,
+) -> PathBuf {
+    let workspace = resolve_workspace_root_from_store_root(workspace_root, dir_name);
+    canonical_store_root(&workspace, dir_name)
+}
+
+/// Resolve the canonical target for a requested store initialization or write.
+pub fn resolve_requested_store_root_for_initialization_from(
+    explicit_store_root: Option<&Path>,
+    explicit_workspace_root: Option<&Path>,
+    env_store_root: Option<&Path>,
+    cwd: Option<&Path>,
+    dir_name: &str,
+) -> PathBuf {
+    let root = explicit_store_root
+        .or(explicit_workspace_root)
+        .or(env_store_root)
+        .or(cwd)
+        .map(start_dir)
+        .unwrap_or_else(|| Path::new(""));
+    resolve_store_root_for_initialization_from(root, dir_name)
 }
 
 /// Resolve a consumer store without silently selecting a sibling workspace
@@ -501,22 +612,37 @@ pub fn resolve_session_store_root_from(
     cwd: Option<&Path>,
     dir_name: &str,
 ) -> PathBuf {
+    resolve_session_store_root_from_with_diagnostics(cwd, dir_name).store_root
+}
+
+pub fn resolve_session_store_root_from_with_diagnostics(
+    cwd: Option<&Path>,
+    dir_name: &str,
+) -> StoreRootResolution {
     let Some(cwd) = cwd else {
-        return PathBuf::from(dir_name);
+        return StoreRootResolution {
+            store_root: PathBuf::from(dir_name),
+            diagnostics: Vec::new(),
+        };
     };
 
     if let Some(existing) = find_local_root_from(cwd, dir_name) {
-        return existing;
+        let workspace = resolve_workspace_root_from_store_root(&existing, dir_name);
+        return resolve_store_root_at_workspace(&workspace, dir_name);
     }
 
     if let Some(nested) = find_descendant_store_roots_from(cwd, dir_name)
         .into_iter()
         .next()
     {
-        return nested;
+        let workspace = resolve_workspace_root_from_store_root(&nested, dir_name);
+        return resolve_store_root_at_workspace(&workspace, dir_name);
     }
 
-    resolve_local_root_from(cwd, dir_name)
+    StoreRootResolution {
+        store_root: start_dir(cwd).join(dir_name),
+        diagnostics: Vec::new(),
+    }
 }
 
 pub fn resolve_workspace_root_from_store_root(
@@ -524,7 +650,16 @@ pub fn resolve_workspace_root_from_store_root(
     dir_name: &str,
 ) -> PathBuf {
     let normalized = normalize_working_dir_path(store_root);
-    if normalized.file_name().and_then(|name| name.to_str()) == Some(dir_name) {
+    if is_store_root(&normalized, dir_name) {
+        if normalized.parent().and_then(Path::file_name).and_then(|name| name.to_str())
+            == Some(CANONICAL_STORES_DIR)
+        {
+            return normalized
+                .parent()
+                .and_then(Path::parent)
+                .map(Path::to_path_buf)
+                .unwrap_or(normalized);
+        }
         return normalized
             .parent()
             .map(Path::to_path_buf)
@@ -819,12 +954,98 @@ fn collect_descendant_store_roots(
             continue;
         }
 
+        if name == CANONICAL_STORES_DIR {
+            let canonical = canonical_store_root(dir, dir_name);
+            if canonical.is_dir() {
+                roots.push(normalize_working_dir_path(&canonical));
+            }
+            continue;
+        }
+
         if should_skip_descendant_dir(name) {
             continue;
         }
 
         collect_descendant_store_roots(&path, dir_name, roots);
     }
+}
+
+fn store_domain(dir_name: &str) -> &str {
+    dir_name.trim_start_matches('.')
+}
+
+fn canonical_store_root(workspace: &Path, dir_name: &str) -> PathBuf {
+    workspace.join(CANONICAL_STORES_DIR).join(store_domain(dir_name))
+}
+
+fn find_store_at_workspace(workspace: &Path, dir_name: &str) -> Option<PathBuf> {
+    let canonical = canonical_store_root(workspace, dir_name);
+    if canonical.is_dir() {
+        return Some(canonical);
+    }
+    let legacy = workspace.join(dir_name);
+    legacy.is_dir().then_some(legacy)
+}
+
+fn resolve_store_root_at_workspace(
+    workspace: &Path,
+    dir_name: &str,
+) -> StoreRootResolution {
+    let canonical_path = canonical_store_root(workspace, dir_name);
+    let legacy_path = workspace.join(dir_name);
+    let canonical_exists = canonical_path.is_dir();
+    let legacy_exists = legacy_path.is_dir();
+    let domain = store_domain(dir_name).to_string();
+
+    let diagnostics = match (canonical_exists, legacy_exists) {
+        (true, true) => vec![StoreRootDiagnostic::BothLayoutsPresent {
+            domain,
+            legacy_path: legacy_path.clone(),
+            canonical_path: canonical_path.clone(),
+        }],
+        (false, true) => vec![StoreRootDiagnostic::LegacyStore {
+            domain,
+            legacy_path: legacy_path.clone(),
+            canonical_path: canonical_path.clone(),
+        }],
+        _ => Vec::new(),
+    };
+    StoreRootResolution {
+        store_root: if canonical_exists {
+            canonical_path
+        } else if legacy_exists {
+            legacy_path
+        } else {
+            canonical_path
+        },
+        diagnostics,
+    }
+}
+
+fn resolve_store_root_at_workspace_read(
+    workspace: &Path,
+    dir_name: &str,
+) -> StoreRootResolution {
+    let resolution = resolve_store_root_at_workspace(workspace, dir_name);
+    if resolution.store_root == canonical_store_root(workspace, dir_name)
+        && resolution.diagnostics.is_empty()
+    {
+        StoreRootResolution {
+            store_root: workspace.join(dir_name),
+            diagnostics: Vec::new(),
+        }
+    } else {
+        resolution
+    }
+}
+
+fn is_store_root(path: &Path, dir_name: &str) -> bool {
+    if path.file_name().and_then(|name| name.to_str()) == Some(dir_name) {
+        return true;
+    }
+    path.file_name().and_then(|name| name.to_str()) == Some(store_domain(dir_name))
+        && path.parent().and_then(Path::file_name).and_then(|name| name.to_str())
+            == Some(CANONICAL_STORES_DIR)
 }
 
 fn should_skip_descendant_dir(name: &str) -> bool {

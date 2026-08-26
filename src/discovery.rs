@@ -32,6 +32,8 @@ pub const STORE_MARKERS: &[(&str, ContentKind)] = &[
     (".spec", ContentKind::Spec),
     (".rule", ContentKind::Rule),
     (".test", ContentKind::Test),
+    (".session", ContentKind::Session),
+    (".feedback", ContentKind::Feedback),
     (".audit", ContentKind::AuditFinding),
 ];
 
@@ -91,13 +93,31 @@ fn walk(
             continue;
         };
 
-        if let Some(kind) = store_kind_for(name) {
+        let in_canonical_container =
+            dir.file_name().and_then(|name| name.to_str())
+                == Some(".workflow-tools");
+        let kind = if in_canonical_container {
+            canonical_store_kind_for(name)
+        } else {
+            store_kind_for(name)
+        };
+        if let Some(kind) = kind {
             out.push(DiscoveredStore {
-                workspace_root: dir.to_path_buf(),
+                workspace_root: if dir.file_name().and_then(|name| name.to_str())
+                    == Some(".workflow-tools")
+                {
+                    dir.parent().unwrap_or(dir).to_path_buf()
+                } else {
+                    dir.to_path_buf()
+                },
                 store_root: path.clone(),
                 kind,
             });
             // Store internals never contain nested workspaces; skip recursion.
+            continue;
+        }
+
+        if in_canonical_container {
             continue;
         }
 
@@ -113,6 +133,13 @@ fn store_kind_for(name: &str) -> Option<ContentKind> {
     STORE_MARKERS
         .iter()
         .find(|(marker, _)| *marker == name)
+        .map(|(_, kind)| *kind)
+}
+
+fn canonical_store_kind_for(name: &str) -> Option<ContentKind> {
+    STORE_MARKERS
+        .iter()
+        .find(|(marker, _)| marker.trim_start_matches('.') == name)
         .map(|(_, kind)| *kind)
 }
 
@@ -248,6 +275,28 @@ mod tests {
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].kind, ContentKind::Ticket);
         assert_eq!(found[0].store_root, root.join(".ticket"));
+    }
+
+    #[test]
+    fn discovers_canonical_stores_once_and_prunes_their_internals() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        mk(root, ".workflow-tools/ticket/tickets/abc/.spec");
+        mk(root, ".workflow-tools/session/sessions/abc/.feedback");
+        mk(root, ".workflow-tools/unknown/.ticket");
+        mk(root, ".git/.workflow-tools/spec");
+        mk(root, "target/.workflow-tools/rule");
+        mk(root, "node_modules/pkg/.workflow-tools/test");
+
+        let found = discover_stores(root);
+
+        assert_eq!(found.len(), 2);
+        assert_eq!(found[0].store_root, root.join(".workflow-tools/session"));
+        assert_eq!(found[0].workspace_root, root);
+        assert_eq!(found[0].kind, ContentKind::Session);
+        assert_eq!(found[1].store_root, root.join(".workflow-tools/ticket"));
+        assert_eq!(found[1].workspace_root, root);
+        assert_eq!(found[1].kind, ContentKind::Ticket);
     }
 
     #[test]

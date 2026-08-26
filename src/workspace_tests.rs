@@ -1,5 +1,6 @@
 use super::*;
 
+use crate::discovery::STORE_MARKERS;
 use tempfile::tempdir;
 
 use super::*;
@@ -81,6 +82,70 @@ fn resolve_store_root_from_preserves_non_workspace_directory() {
     let resolved = resolve_store_root_from(&scratch, ".ticket");
 
     assert_eq!(resolved, scratch);
+}
+
+#[test]
+fn store_layout_resolution_covers_every_registered_domain() {
+    for (legacy_name, _) in STORE_MARKERS {
+        let domain = legacy_name.trim_start_matches('.');
+        let dir = tempdir().unwrap();
+        let repo = dir.path().join("repo");
+        let nested = repo.join("src");
+        let canonical = repo.join(CANONICAL_STORES_DIR).join(domain);
+        let legacy = repo.join(legacy_name);
+        std::fs::create_dir_all(&nested).unwrap();
+
+        std::fs::create_dir_all(&canonical).unwrap();
+        let resolution =
+            resolve_store_root_from_with_diagnostics(&nested, legacy_name);
+        assert_eq!(resolution.store_root, canonical);
+        assert!(resolution.diagnostics.is_empty());
+        std::fs::remove_dir_all(repo.join(CANONICAL_STORES_DIR)).unwrap();
+
+        std::fs::create_dir_all(&legacy).unwrap();
+        let resolution =
+            resolve_store_root_from_with_diagnostics(&nested, legacy_name);
+        assert_eq!(resolution.store_root, legacy);
+        assert_eq!(
+            resolution.diagnostics,
+            vec![StoreRootDiagnostic::LegacyStore {
+                domain: domain.to_string(),
+                legacy_path: repo.join(legacy_name),
+                canonical_path: repo.join(CANONICAL_STORES_DIR).join(domain),
+            }]
+        );
+        std::fs::create_dir_all(repo.join(CANONICAL_STORES_DIR).join(domain))
+            .unwrap();
+
+        let resolution =
+            resolve_store_root_from_with_diagnostics(&nested, legacy_name);
+        assert_eq!(resolution.store_root, canonical);
+        assert_eq!(
+            resolution.diagnostics,
+            vec![StoreRootDiagnostic::BothLayoutsPresent {
+                domain: domain.to_string(),
+                legacy_path: repo.join(legacy_name),
+                canonical_path: repo.join(CANONICAL_STORES_DIR).join(domain),
+            }]
+        );
+        std::fs::remove_dir_all(&legacy).unwrap();
+        std::fs::remove_dir_all(repo.join(CANONICAL_STORES_DIR)).unwrap();
+
+        let resolution =
+            resolve_store_root_from_with_diagnostics(&nested, legacy_name);
+        assert_eq!(resolution.store_root, nested);
+        assert!(resolution.diagnostics.is_empty());
+        assert_eq!(
+            resolve_requested_store_root_for_initialization_from(
+                None,
+                None,
+                None,
+                Some(&nested),
+                legacy_name,
+            ),
+            nested.join(CANONICAL_STORES_DIR).join(domain),
+        );
+    }
 }
 
 #[test]
