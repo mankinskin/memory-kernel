@@ -53,7 +53,7 @@ impl std::fmt::Display for InvalidWorkspaceSelector {
     ) -> std::fmt::Result {
         write!(
             f,
-            "invalid workspace selector '{}': entity creation requires an explicit workspace path; do not use omitted, empty, 'default', '.', or '..'",
+            "invalid workspace selector '{}': entity creation requires an explicit workspace path; do not use omitted, empty, 'default', or '..'; use '.' explicitly to target the MCP server process's current working directory",
             self.value
         )
     }
@@ -70,7 +70,7 @@ pub fn validate_explicit_workspace_selector(
         });
     };
     let trimmed = workspace.trim();
-    if matches!(trimmed, "" | "default" | "." | "..") {
+    if matches!(trimmed, "" | "default" | "..") {
         return Err(InvalidWorkspaceSelector {
             value: trimmed.to_string(),
         });

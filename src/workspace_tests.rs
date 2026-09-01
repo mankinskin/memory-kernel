@@ -20,14 +20,7 @@ fn find_local_root_from_discovers_parent_workspace() {
 
 #[test]
 fn explicit_workspace_selector_rejects_ambient_aliases() {
-    for value in [
-        None,
-        Some(""),
-        Some("  "),
-        Some("default"),
-        Some("."),
-        Some(".."),
-    ] {
+    for value in [None, Some(""), Some("  "), Some("default"), Some("..")] {
         assert!(validate_explicit_workspace_selector(value).is_err());
     }
 
@@ -35,6 +28,11 @@ fn explicit_workspace_selector_rejects_ambient_aliases() {
         validate_explicit_workspace_selector(Some("memory-api")).unwrap(),
         "memory-api"
     );
+}
+
+#[test]
+fn explicit_workspace_selector_accepts_current_directory() {
+    assert_eq!(validate_explicit_workspace_selector(Some(".")).unwrap(), ".");
 }
 
 #[test]
