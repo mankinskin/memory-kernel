@@ -1006,6 +1006,24 @@ fn find_store_at_workspace(workspace: &Path, dir_name: &str) -> Option<PathBuf> 
     legacy.is_dir().then_some(legacy)
 }
 
+/// Resolve a store's location at a single, already-fixed workspace root,
+/// without walking any ancestor directory.
+///
+/// This is the bounded counterpart to [`resolve_store_root_from`] for callers
+/// (worktree-scoped resolvers, security-sensitive mutation gates) that must
+/// not escape a specific workspace/worktree boundary by searching upward.
+/// Resolution order: an existing canonical `.workflow-tools/<domain>` store,
+/// then an existing legacy bare `<dir_name>` store, then the legacy bare path
+/// (unchanged default location for a not-yet-created store, preserving every
+/// existing caller's current default-creation behavior).
+pub fn resolve_store_root_at_fixed_workspace(
+    workspace: &Path,
+    dir_name: &str,
+) -> PathBuf {
+    let normalized = normalize_working_dir_path(workspace);
+    find_store_at_workspace(&normalized, dir_name).unwrap_or_else(|| normalized.join(dir_name))
+}
+
 fn resolve_store_root_at_workspace(
     workspace: &Path,
     dir_name: &str,
