@@ -170,6 +170,19 @@ pub trait MoveDomain {
     /// store does not currently index it.
     fn source_entity_path(&self, entity_id: &Uuid) -> MoveResult<Option<PathBuf>>;
 
+    fn source_entity_paths_for_set(
+        &self,
+        entity_ids: &[Uuid],
+    ) -> MoveResult<std::collections::BTreeMap<Uuid, PathBuf>> {
+        let mut result = std::collections::BTreeMap::new();
+        for entity_id in entity_ids {
+            if let Some(path) = self.source_entity_path(entity_id)? {
+                result.insert(*entity_id, path);
+            }
+        }
+        Ok(result)
+    }
+
     /// Inbound and outbound related entity ids (graph edges). Domains without an
     /// edge model return [`MoveReferences::default`].
     fn related_entities(&self, entity_id: &Uuid) -> MoveResult<MoveReferences>;
@@ -203,6 +216,24 @@ pub trait MoveDomain {
         _entity_id: &Uuid,
     ) -> MoveResult<Vec<BoardEntry>> {
         Ok(Vec::new())
+    }
+
+    /// Migrate historical board rows for a complete set in one store
+    /// operation, keyed by entity id. The default preserves compatibility by
+    /// delegating to the single-entity hook.
+    fn migrate_board_history_for_set(
+        &self,
+        target_store_root: &Path,
+        entity_ids: &[Uuid],
+    ) -> MoveResult<std::collections::BTreeMap<Uuid, Vec<BoardEntry>>> {
+        let mut result = std::collections::BTreeMap::new();
+        for entity_id in entity_ids {
+            let entries = self.migrate_board_history(target_store_root, entity_id)?;
+            if !entries.is_empty() {
+                result.insert(*entity_id, entries);
+            }
+        }
+        Ok(result)
     }
 
     /// Restore previously migrated board rows back to the source store (rollback).
@@ -621,6 +652,7 @@ pub struct MoveSetPlan {
     pub target_git_worktree_root: PathBuf,
     pub git_worktree_topology: GitWorktreeTopology,
     pub target_store_present: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub entity_plans: Vec<MovePlan>,
     pub captured_at: chrono::DateTime<Utc>,
 }
@@ -682,6 +714,7 @@ pub struct MoveSetJournal {
         deserialize_with = "deserialize_pathbuf"
     )]
     pub target_store_root: PathBuf,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub entity_plans: Vec<MovePlan>,
     pub entity_journal_ids: std::collections::BTreeMap<Uuid, Uuid>,
     #[serde(
@@ -692,14 +725,15 @@ pub struct MoveSetJournal {
     pub phase: MoveSetExecutionPhase,
     pub created_at: chrono::DateTime<Utc>,
     pub updated_at: chrono::DateTime<Utc>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub completed_entity_ids: Vec<Uuid>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub rollback_completed_entity_ids: Vec<Uuid>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub entity_errors: std::collections::BTreeMap<Uuid, String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub failure: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub next_recovery_step: Option<String>,
 }
 
@@ -711,7 +745,10 @@ impl MoveSetJournal {
             || self.source_store_root.as_os_str().is_empty()
             || self.target_store_root.as_os_str().is_empty()
             || self.entity_ids != normalize_entity_selection(&self.entity_ids)
-            || self.entity_plans.len() != self.entity_ids.len()
+            || (!matches!(
+                self.phase,
+                MoveSetExecutionPhase::Validated | MoveSetExecutionPhase::RolledBack
+            ) && self.entity_plans.len() != self.entity_ids.len())
             || self.entity_journal_ids.len() != self.entity_ids.len()
         {
             return Err(MoveError::Domain(
@@ -726,7 +763,12 @@ impl MoveSetJournal {
                 .collect::<Vec<_>>(),
         );
         let journal_ids = self.entity_journal_ids.keys().copied().collect::<Vec<_>>();
-        if planned_ids != self.entity_ids || journal_ids != self.entity_ids {
+        if (!matches!(
+            self.phase,
+            MoveSetExecutionPhase::Validated | MoveSetExecutionPhase::RolledBack
+        ) && planned_ids != self.entity_ids)
+            || journal_ids != self.entity_ids
+        {
             return Err(MoveError::Domain(
                 "move set journal entity plan does not match selection".to_string(),
             ));

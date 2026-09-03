@@ -424,7 +424,7 @@ pub fn execute_move<D: MoveDomain + ?Sized>(
             "move preflight contains blockers".to_string(),
         ));
     }
-    execute_or_resume(domain, plan, None, false, false, false, false)
+    execute_or_resume(domain, plan, None, None, false, false, false, false)
 }
 
 /// Resume an interrupted move identified by its journal id.
@@ -450,7 +450,7 @@ pub fn resume_move<D: MoveDomain + ?Sized>(
         domain.store_index_dir(),
     );
     let plan = plan_move(domain, &journal.entity_id, &target_workspace_root)?;
-    execute_or_resume(domain, &plan, Some(journal), true, false, false, false)
+    execute_or_resume(domain, &plan, Some(journal), None, true, false, false, false)
 }
 
 /// Roll back a move identified by its journal id.
@@ -571,6 +571,7 @@ fn execute_or_resume<D: MoveDomain + ?Sized>(
     domain: &D,
     plan: &MovePlan,
     existing: Option<MoveJournal>,
+    pre_migrated_board_entries: Option<Vec<BoardEntry>>,
     resumed: bool,
     skip_lock: bool,
     skip_reconciliation: bool,
@@ -648,6 +649,7 @@ fn execute_or_resume<D: MoveDomain + ?Sized>(
             &journal_root,
             &span,
             skip_reconciliation,
+            pre_migrated_board_entries,
         )?;
         advance_phase_source_scanned(
             domain,
@@ -755,6 +757,7 @@ fn execute_move_within_set<D: MoveDomain + ?Sized>(
     plan: &MovePlan,
     journal_id: Uuid,
     existing: Option<MoveJournal>,
+    pre_migrated_board_entries: Option<Vec<BoardEntry>>,
     resumed: bool,
 ) -> MoveResult<MoveOutcome> {
     if !plan.supported() {
@@ -766,6 +769,7 @@ fn execute_move_within_set<D: MoveDomain + ?Sized>(
         domain,
         plan,
         Some(existing.unwrap_or_else(|| journal_from_plan(plan, journal_id))),
+        pre_migrated_board_entries,
         resumed,
         true,
         true,
@@ -897,6 +901,10 @@ fn execute_move_set_journal<D: MoveDomain + ?Sized>(
     persist_move_set_journal(&journal.source_store_root, journal)?;
 
     let mut entity_outcomes = Vec::with_capacity(journal.entity_plans.len());
+    let mut migrated_board_entries_by_entity = domain.migrate_board_history_for_set(
+        &journal.target_store_root,
+        &journal.entity_ids,
+    )?;
     for plan in &journal.entity_plans {
         if journal.completed_entity_ids.contains(&plan.entity_id) {
             let entity_journal_id = journal.entity_journal_ids[&plan.entity_id];
@@ -936,7 +944,18 @@ fn execute_move_set_journal<D: MoveDomain + ?Sized>(
                 continue;
             }
         }
-        match execute_move_within_set(domain, plan, entity_journal_id, existing, resumed) {
+        match execute_move_within_set(
+            domain,
+            plan,
+            entity_journal_id,
+            existing,
+            Some(
+                migrated_board_entries_by_entity
+                    .remove(&plan.entity_id)
+                    .unwrap_or_default(),
+            ),
+            resumed,
+        ) {
             Ok(outcome) => {
                 journal.completed_entity_ids.push(plan.entity_id);
                 journal.entity_errors.remove(&plan.entity_id);
@@ -1313,6 +1332,13 @@ mod move_set_tests {
                 .expect("set journal must round-trip");
         assert_eq!(loaded_set_journal.entity_ids, set_plan.entity_ids);
         assert_eq!(loaded_set_journal.phase, MoveSetExecutionPhase::Validated);
+        assert!(loaded_set_journal.entity_plans.is_empty());
+        let persisted_payload = fs::read_to_string(move_set_journal_path(
+            &domain.source_store_root,
+            outcome.journal.id,
+        ))
+        .expect("persisted set journal");
+        assert!(!persisted_payload.contains("entity_plans"));
         for entity_outcome in &outcome.entity_outcomes {
             assert_eq!(entity_outcome.journal.phase, MoveExecutionPhase::Validated);
             assert!(!entity_outcome.journal.source_entity_path.exists());

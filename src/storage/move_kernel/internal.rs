@@ -290,6 +290,7 @@ pub(super) fn advance_phase_moved<D: MoveDomain + ?Sized>(
     journal_root: &Path,
     span: &tracing::Span,
     skip_reconciliation: bool,
+    pre_migrated_board_entries: Option<Vec<BoardEntry>>,
 ) -> MoveResult<()> {
     if journal.phase != MoveExecutionPhase::Moved {
         return Ok(());
@@ -317,8 +318,10 @@ pub(super) fn advance_phase_moved<D: MoveDomain + ?Sized>(
 
     if journal.migrated_board_entries.is_empty() {
         let started = Instant::now();
-        journal.migrated_board_entries =
-            domain.migrate_board_history(&journal.target_store_root, &journal.entity_id)?;
+        journal.migrated_board_entries = match pre_migrated_board_entries {
+            Some(entries) => entries,
+            None => domain.migrate_board_history(&journal.target_store_root, &journal.entity_id)?,
+        };
         record_phase_timing(journal, "migrate_board_history_ms", started.elapsed());
         if !journal.migrated_board_entries.is_empty() {
             journal.steps.push(format!(
@@ -793,8 +796,15 @@ pub fn persist_move_set_journal(store_root: &Path, journal: &MoveSetJournal) -> 
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let payload =
-        serde_json::to_vec_pretty(journal).map_err(|error| MoveError::Domain(error.to_string()))?;
+    let mut persisted = journal.clone();
+    if matches!(
+        persisted.phase,
+        MoveSetExecutionPhase::Validated | MoveSetExecutionPhase::RolledBack
+    ) {
+        persisted.entity_plans.clear();
+    }
+    let payload = serde_json::to_vec_pretty(&persisted)
+        .map_err(|error| MoveError::Domain(error.to_string()))?;
     fs::write(path, payload).map_err(MoveError::Io)
 }
 
