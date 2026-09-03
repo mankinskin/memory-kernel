@@ -15,7 +15,7 @@ resolver = "3"
 [features]
 ## Expose `memory_kernel::testing` — generic sandbox primitives for integration
 ## tests.  Consumers add this to `[dev-dependencies]` only.
-testing = []
+testing = ["dep:criterion"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -37,6 +37,7 @@ tracing = "0.1"
 regex = "1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 tracing-appender = "0.2"
+criterion = { version = "0.5", optional = true }
 
 # jq query language
 jaq-core = "1"

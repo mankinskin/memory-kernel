@@ -12,10 +12,7 @@ pub enum MoveError {
 }
 
 impl std::fmt::Display for MoveError {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             MoveError::Io(error) => write!(f, "{error}"),
             MoveError::Domain(message) => write!(f, "{message}"),
@@ -144,6 +141,14 @@ pub struct MoveBoardState {
     pub historical_entries: Vec<BoardEntry>,
 }
 
+/// Tracked files discovered for a complete move set, plus any scan blockers
+/// that apply to every entity with an existing source path.
+#[derive(Debug, Clone, Default)]
+pub struct MovePathReferenceSet {
+    pub files_by_entity: std::collections::BTreeMap<Uuid, Vec<PathBuf>>,
+    pub blockers: Vec<MoveBlocker>,
+}
+
 /// Domain-specific hooks the kernel needs to plan and execute a move.
 ///
 /// Implementors are thin adapters over a concrete domain store. Every method is
@@ -163,46 +168,27 @@ pub trait MoveDomain {
 
     /// On-disk path of the entity in the source store, or `None` if the source
     /// store does not currently index it.
-    fn source_entity_path(
-        &self,
-        entity_id: &Uuid,
-    ) -> MoveResult<Option<PathBuf>>;
+    fn source_entity_path(&self, entity_id: &Uuid) -> MoveResult<Option<PathBuf>>;
 
     /// Inbound and outbound related entity ids (graph edges). Domains without an
     /// edge model return [`MoveReferences::default`].
-    fn related_entities(
-        &self,
-        entity_id: &Uuid,
-    ) -> MoveResult<MoveReferences>;
+    fn related_entities(&self, entity_id: &Uuid) -> MoveResult<MoveReferences>;
 
     /// Whether the destination store exists at `target_store_root`.
-    fn target_store_present(
-        &self,
-        target_store_root: &Path,
-    ) -> MoveResult<bool>;
+    fn target_store_present(&self, target_store_root: &Path) -> MoveResult<bool>;
 
     /// Whether `entity_id` is indexed by the store rooted at `store_root`.
-    fn entity_indexed_in(
-        &self,
-        store_root: &Path,
-        entity_id: &Uuid,
-    ) -> MoveResult<bool>;
+    fn entity_indexed_in(&self, store_root: &Path, entity_id: &Uuid) -> MoveResult<bool>;
 
     /// Board rows for the entity. Domains without a board return
     /// [`MoveBoardState::default`] (the default implementation).
-    fn board_state(
-        &self,
-        _entity_id: &Uuid,
-    ) -> MoveResult<MoveBoardState> {
+    fn board_state(&self, _entity_id: &Uuid) -> MoveResult<MoveBoardState> {
         Ok(MoveBoardState::default())
     }
 
     /// Active leases for the entity. Domains without leases return an empty vec
     /// (the default implementation).
-    fn active_leases(
-        &self,
-        _entity_id: &Uuid,
-    ) -> MoveResult<Vec<MoveLeaseBlock>> {
+    fn active_leases(&self, _entity_id: &Uuid) -> MoveResult<Vec<MoveLeaseBlock>> {
         Ok(Vec::new())
     }
 
@@ -229,10 +215,7 @@ pub trait MoveDomain {
     }
 
     /// Force a full rescan of the store rooted at `store_root`.
-    fn scan_store(
-        &self,
-        store_root: &Path,
-    ) -> MoveResult<()>;
+    fn scan_store(&self, store_root: &Path) -> MoveResult<()>;
 
     /// Reconcile only a known touched subset when the caller already knows the
     /// affected ids (for example move execution for a single entity). Domains
@@ -244,6 +227,15 @@ pub trait MoveDomain {
     ) -> MoveResult<()> {
         let _ = touched_entity_ids;
         self.scan_store(store_root)
+    }
+
+    /// Reconcile one complete set in a single store operation.
+    fn reconcile_store_set(
+        &self,
+        store_root: &Path,
+        touched_entity_ids: &[Uuid],
+    ) -> MoveResult<()> {
+        self.reconcile_store_touched(store_root, touched_entity_ids)
     }
 
     /// Related entities for every id in `entity_ids`, keyed by entity id.
@@ -283,10 +275,7 @@ pub trait MoveDomain {
     ) -> MoveResult<std::collections::BTreeMap<Uuid, bool>> {
         let mut result = std::collections::BTreeMap::new();
         for entity_id in entity_ids {
-            result.insert(
-                *entity_id,
-                self.entity_indexed_in(store_root, entity_id)?,
-            );
+            result.insert(*entity_id, self.entity_indexed_in(store_root, entity_id)?);
         }
         Ok(result)
     }
@@ -324,6 +313,29 @@ pub trait MoveDomain {
             result.insert(*entity_id, self.active_leases(entity_id)?);
         }
         Ok(result)
+    }
+
+    /// Discover tracked path-reference files for every existing entity in a
+    /// set. The default implementation batches candidates into one Git query
+    /// per distinct repository; domains may override the hook when they have a
+    /// more direct reference index.
+    fn path_reference_files_for_set(
+        &self,
+        entity_paths: &std::collections::BTreeMap<Uuid, PathBuf>,
+        source_git_root: &Path,
+        target_git_root: &Path,
+        source_store_root: &Path,
+        target_store_root: &Path,
+        subdir: &str,
+    ) -> MoveResult<MovePathReferenceSet> {
+        Ok(super::internal::collect_plan_path_reference_files_for_set(
+            entity_paths,
+            source_git_root,
+            target_git_root,
+            source_store_root,
+            target_store_root,
+            subdir,
+        ))
     }
 }
 
@@ -405,10 +417,7 @@ impl MovePlan {
     }
 }
 
-fn serialize_normalized_path<S>(
-    path: &PathBuf,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
+fn serialize_normalized_path<S>(path: &PathBuf, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
@@ -422,21 +431,15 @@ where
     Ok(PathBuf::from(String::deserialize(deserializer)?))
 }
 
-fn serialize_normalized_path_vec<S>(
-    paths: &[PathBuf],
-    serializer: S,
-) -> Result<S::Ok, S::Error>
+fn serialize_normalized_path_vec<S>(paths: &[PathBuf], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
-    let normalized: Vec<String> =
-        paths.iter().map(|path| normalize_slashes(path)).collect();
+    let normalized: Vec<String> = paths.iter().map(|path| normalize_slashes(path)).collect();
     normalized.serialize(serializer)
 }
 
-fn deserialize_pathbuf_vec<'de, D>(
-    deserializer: D
-) -> Result<Vec<PathBuf>, D::Error>
+fn deserialize_pathbuf_vec<'de, D>(deserializer: D) -> Result<Vec<PathBuf>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -560,10 +563,7 @@ pub struct MoveJournal {
     pub rewritten_path_files: Vec<MovePathRewrite>,
     #[serde(default)]
     pub manual_followups: Vec<MoveManualFollowup>,
-    #[serde(
-        default,
-        skip_serializing_if = "std::collections::BTreeMap::is_empty"
-    )]
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub phase_timings_ms: std::collections::BTreeMap<String, u64>,
     pub failure: Option<String>,
     #[serde(default)]
@@ -628,8 +628,7 @@ pub struct MoveSetPlan {
 impl MoveSetPlan {
     /// The set move is supported only when every entity plan has no blockers.
     pub fn supported(&self) -> bool {
-        !self.entity_plans.is_empty()
-            && self.entity_plans.iter().all(MovePlan::supported)
+        !self.entity_plans.is_empty() && self.entity_plans.iter().all(MovePlan::supported)
     }
 
     /// All blockers across every entity plan, in `entity_plans` order.
@@ -716,19 +715,21 @@ impl MoveSetJournal {
             || self.entity_journal_ids.len() != self.entity_ids.len()
         {
             return Err(MoveError::Domain(
-                "move set journal is missing valid immutable operation state"
-                    .to_string(),
+                "move set journal is missing valid immutable operation state".to_string(),
             ));
         }
         let planned_ids = normalize_entity_selection(
-            &self.entity_plans.iter().map(|plan| plan.entity_id).collect::<Vec<_>>(),
+            &self
+                .entity_plans
+                .iter()
+                .map(|plan| plan.entity_id)
+                .collect::<Vec<_>>(),
         );
         let journal_ids = self.entity_journal_ids.keys().copied().collect::<Vec<_>>();
         if planned_ids != self.entity_ids || journal_ids != self.entity_ids {
-                return Err(MoveError::Domain(
-                    "move set journal entity plan does not match selection"
-                        .to_string(),
-                ));
+            return Err(MoveError::Domain(
+                "move set journal entity plan does not match selection".to_string(),
+            ));
         }
         Ok(())
     }
@@ -791,9 +792,7 @@ impl MoveJournal {
             return Ok(());
         }
         Err(MoveError::InteroperabilityContract {
-            artifact_class: <Self as InteroperableArtifact>::artifact_class(
-                self,
-            ),
+            artifact_class: <Self as InteroperableArtifact>::artifact_class(self),
             detail: gaps.join(", "),
         })
     }
@@ -815,9 +814,7 @@ mod interoperability_contract_tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             steps: vec!["created move journal".to_string()],
-            rollback_steps: vec![
-                "rename destination back to source".to_string(),
-            ],
+            rollback_steps: vec!["rename destination back to source".to_string()],
             lock_paths: Vec::new(),
             migrated_board_entries: Vec::new(),
             rewritten_path_files: Vec::new(),
@@ -856,7 +853,7 @@ mod interoperability_contract_tests {
                     detail.contains("missing authoritative operation identity"),
                     "unexpected detail: {detail}"
                 );
-            },
+            }
             other => panic!("unexpected error variant: {other:?}"),
         }
     }

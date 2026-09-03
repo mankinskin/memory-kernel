@@ -1,5 +1,6 @@
 use super::*;
 use crate::InteroperableArtifact;
+use std::collections::BTreeMap;
 
 pub(super) fn resolve_target_git_root_or_block(
     target_workspace_root: &Path,
@@ -11,7 +12,7 @@ pub(super) fn resolve_target_git_root_or_block(
         Err(reason) => {
             blockers.push(MoveBlocker::PathReferenceScanUnavailable { reason });
             source_git_root.to_path_buf()
-        },
+        }
     }
 }
 
@@ -85,6 +86,105 @@ pub(super) fn collect_plan_path_reference_files(
     files.into_iter().collect()
 }
 
+pub(super) fn collect_plan_path_reference_files_for_set(
+    entity_paths: &BTreeMap<Uuid, PathBuf>,
+    source_git_root: &Path,
+    target_git_root: &Path,
+    source_store_root: &Path,
+    target_store_root: &Path,
+    subdir: &str,
+) -> MovePathReferenceSet {
+    let mut result = MovePathReferenceSet::default();
+    let mut repositories = vec![source_git_root];
+    if source_git_root != target_git_root {
+        repositories.push(target_git_root);
+    }
+
+    for git_root in repositories {
+        let mut candidates = BTreeMap::<String, BTreeSet<Uuid>>::new();
+        for (entity_id, entity_path) in entity_paths {
+            let absolute = entity_path.to_string_lossy().replace('\\', "/");
+            candidates.entry(absolute).or_default().insert(*entity_id);
+            if let Ok(relative) = safe_strip_prefix(entity_path, git_root) {
+                candidates
+                    .entry(relative.to_string_lossy().replace('\\', "/"))
+                    .or_default()
+                    .insert(*entity_id);
+            }
+        }
+        if candidates.is_empty() {
+            continue;
+        }
+
+        let mut command = Command::new("git");
+        command.args([
+            "-C",
+            &git_root.to_string_lossy(),
+            "grep",
+            "-nF",
+            "--full-name",
+        ]);
+        for candidate in candidates.keys() {
+            command.args(["-e", candidate]);
+        }
+        command.arg("--");
+        let output = match command.output() {
+            Ok(output) => output,
+            Err(error) => {
+                result
+                    .blockers
+                    .push(MoveBlocker::PathReferenceScanUnavailable {
+                        reason: error.to_string(),
+                    });
+                continue;
+            }
+        };
+        if !output.status.success() && output.status.code() != Some(1) {
+            result
+                .blockers
+                .push(MoveBlocker::PathReferenceScanUnavailable {
+                    reason: String::from_utf8_lossy(&output.stderr).trim().to_string(),
+                });
+            continue;
+        }
+
+        for line in String::from_utf8_lossy(&output.stdout).lines() {
+            let Some((file, remainder)) = line.split_once(':') else {
+                continue;
+            };
+            let Some((_, content)) = remainder.split_once(':') else {
+                continue;
+            };
+            let candidate_file = git_root.join(file);
+            if !is_persistent_move_reference_file(
+                &candidate_file,
+                source_store_root,
+                target_store_root,
+                subdir,
+            ) {
+                continue;
+            }
+            for (candidate, entity_ids) in &candidates {
+                if content.contains(candidate) {
+                    for entity_id in entity_ids {
+                        result
+                            .files_by_entity
+                            .entry(*entity_id)
+                            .or_default()
+                            .push(candidate_file.clone());
+                    }
+                }
+            }
+        }
+    }
+
+    for files in result.files_by_entity.values_mut() {
+        files.sort();
+        files.dedup();
+    }
+    result
+}
+
 pub(super) fn collect_candidate_reference_files(
     git_root: &Path,
     resolved_source_path: &Path,
@@ -107,10 +207,8 @@ pub(super) fn collect_candidate_reference_files(
                     files.insert(candidate);
                 }
             }
-        },
-        Err(reason) => {
-            blockers.push(MoveBlocker::PathReferenceScanUnavailable { reason })
-        },
+        }
+        Err(reason) => blockers.push(MoveBlocker::PathReferenceScanUnavailable { reason }),
     }
 }
 
@@ -119,6 +217,7 @@ pub(super) fn advance_phase_planned(
     journal_root: &Path,
     span: &tracing::Span,
     skip_lock: bool,
+    persist_phase: bool,
 ) -> MoveResult<()> {
     if journal.phase != MoveExecutionPhase::Planned {
         return Ok(());
@@ -140,7 +239,9 @@ pub(super) fn advance_phase_planned(
     span.record("phase", phase_name(&journal.phase));
     journal.updated_at = Utc::now();
     journal.steps.push(step.to_string());
-    persist_journal(journal_root, journal)?;
+    if persist_phase {
+        persist_journal(journal_root, journal)?;
+    }
     tracing::debug!(
         target: MOVE_TRACE_TARGET,
         phase = phase_name(&journal.phase),
@@ -188,14 +289,13 @@ pub(super) fn advance_phase_moved<D: MoveDomain + ?Sized>(
     journal: &mut MoveJournal,
     journal_root: &Path,
     span: &tracing::Span,
+    skip_reconciliation: bool,
 ) -> MoveResult<()> {
     if journal.phase != MoveExecutionPhase::Moved {
         return Ok(());
     }
 
-    if journal.rewritten_path_files.is_empty()
-        && journal.manual_followups.is_empty()
-    {
+    if journal.rewritten_path_files.is_empty() && journal.manual_followups.is_empty() {
         let started = Instant::now();
         let (rewritten, followups) = rewrite_path_references(plan)?;
         record_phase_timing(journal, "rewrite_path_refs_ms", started.elapsed());
@@ -217,15 +317,9 @@ pub(super) fn advance_phase_moved<D: MoveDomain + ?Sized>(
 
     if journal.migrated_board_entries.is_empty() {
         let started = Instant::now();
-        journal.migrated_board_entries = domain.migrate_board_history(
-            &journal.target_store_root,
-            &journal.entity_id,
-        )?;
-        record_phase_timing(
-            journal,
-            "migrate_board_history_ms",
-            started.elapsed(),
-        );
+        journal.migrated_board_entries =
+            domain.migrate_board_history(&journal.target_store_root, &journal.entity_id)?;
+        record_phase_timing(journal, "migrate_board_history_ms", started.elapsed());
         if !journal.migrated_board_entries.is_empty() {
             journal.steps.push(format!(
                 "migrated {} historical board rows",
@@ -235,10 +329,9 @@ pub(super) fn advance_phase_moved<D: MoveDomain + ?Sized>(
     }
 
     let started = Instant::now();
-    domain.reconcile_store_touched(
-        &journal.source_store_root,
-        &[journal.entity_id],
-    )?;
+    if !skip_reconciliation {
+        domain.reconcile_store_touched(&journal.source_store_root, &[journal.entity_id])?;
+    }
     record_phase_timing(journal, "scan_source_ms", started.elapsed());
     journal.phase = MoveExecutionPhase::SourceScanned;
     span.record("phase", phase_name(&journal.phase));
@@ -261,22 +354,25 @@ pub(super) fn advance_phase_source_scanned<D: MoveDomain + ?Sized>(
     journal: &mut MoveJournal,
     journal_root: &Path,
     span: &tracing::Span,
+    skip_reconciliation: bool,
+    persist_phase: bool,
 ) -> MoveResult<()> {
     if journal.phase != MoveExecutionPhase::SourceScanned {
         return Ok(());
     }
 
     let started = Instant::now();
-    domain.reconcile_store_touched(
-        &journal.target_store_root,
-        &[journal.entity_id],
-    )?;
+    if !skip_reconciliation {
+        domain.reconcile_store_touched(&journal.target_store_root, &[journal.entity_id])?;
+    }
     record_phase_timing(journal, "scan_target_ms", started.elapsed());
     journal.phase = MoveExecutionPhase::TargetScanned;
     span.record("phase", phase_name(&journal.phase));
     journal.updated_at = Utc::now();
     journal.steps.push("scanned target store".to_string());
-    persist_journal(journal_root, journal)?;
+    if persist_phase {
+        persist_journal(journal_root, journal)?;
+    }
     tracing::debug!(
         target: MOVE_TRACE_TARGET,
         phase = phase_name(&journal.phase),
@@ -290,18 +386,30 @@ pub(super) fn advance_phase_target_scanned<D: MoveDomain + ?Sized>(
     journal: &mut MoveJournal,
     journal_root: &Path,
     span: &tracing::Span,
+    skip_validation: bool,
+    persist_phase: bool,
 ) -> MoveResult<()> {
     if journal.phase != MoveExecutionPhase::TargetScanned {
         return Ok(());
     }
 
     let started = Instant::now();
+    if skip_validation {
+        journal.phase = MoveExecutionPhase::TargetScanned;
+        span.record("phase", phase_name(&journal.phase));
+        journal.updated_at = Utc::now();
+        journal
+            .steps
+            .push("deferred set ownership validation".to_string());
+        if persist_phase {
+            persist_journal(journal_root, journal)?;
+        }
+        return Ok(());
+    }
     let source_path_exists = journal.source_entity_path.exists();
     let destination_path_exists = journal.destination_entity_path.exists();
-    let source_seen = domain
-        .entity_indexed_in(&journal.source_store_root, &journal.entity_id)?;
-    let target_seen = domain
-        .entity_indexed_in(&journal.target_store_root, &journal.entity_id)?;
+    let source_seen = domain.entity_indexed_in(&journal.source_store_root, &journal.entity_id)?;
+    let target_seen = domain.entity_indexed_in(&journal.target_store_root, &journal.entity_id)?;
     record_phase_timing(journal, "validate_move_ms", started.elapsed());
     if source_path_exists || !destination_path_exists {
         return Err(build_post_move_validation_error(
@@ -332,7 +440,9 @@ pub(super) fn advance_phase_target_scanned<D: MoveDomain + ?Sized>(
     journal.steps.push("validated move ownership".to_string());
     journal.failure = None;
     journal.next_recovery_step = None;
-    persist_journal(journal_root, journal)?;
+    if persist_phase {
+        persist_journal(journal_root, journal)?;
+    }
     tracing::debug!(
         target: MOVE_TRACE_TARGET,
         phase = phase_name(&journal.phase),
@@ -419,7 +529,7 @@ pub(super) fn acquire_lock_set(lock_paths: &[PathBuf]) -> MoveResult<()> {
                     path.display(),
                     error
                 )));
-            },
+            }
         }
     }
     Ok(())
@@ -461,9 +571,7 @@ pub(super) fn phase_name(phase: &MoveExecutionPhase) -> &'static str {
     }
 }
 
-pub(super) fn restore_rewritten_path(
-    rewrite: &MovePathRewrite
-) -> MoveResult<()> {
+pub(super) fn restore_rewritten_path(rewrite: &MovePathRewrite) -> MoveResult<()> {
     if let Some(previous_content) = &rewrite.previous_content {
         fs::write(&rewrite.path, previous_content.as_bytes())?;
         return Ok(());
@@ -480,16 +588,13 @@ pub(super) fn restore_rewritten_path(
 
         let mut restored = current_content.clone();
         for replacement in rewrite.replacements.iter().rev() {
-            restored =
-                restored.replace(&replacement.after, &replacement.before);
+            restored = restored.replace(&replacement.after, &replacement.before);
         }
         fs::write(&rewrite.path, restored.as_bytes())?;
         return Ok(());
     }
 
-    if path_buf_is_empty(&rewrite.repo_root)
-        || path_buf_is_empty(&rewrite.repo_relative_path)
-    {
+    if path_buf_is_empty(&rewrite.repo_root) || path_buf_is_empty(&rewrite.repo_relative_path) {
         return Err(MoveError::Domain(format!(
             "journal rewrite record for {} is missing rollback metadata",
             normalize_slashes(&rewrite.path)
@@ -499,56 +604,46 @@ pub(super) fn restore_rewritten_path(
     git_restore_tracked_path(&rewrite.repo_root, &rewrite.repo_relative_path)
 }
 
-pub(super) fn recovery_hint_for_phase(
-    phase: &MoveExecutionPhase
-) -> &'static str {
+pub(super) fn recovery_hint_for_phase(phase: &MoveExecutionPhase) -> &'static str {
     match phase {
         MoveExecutionPhase::Planned | MoveExecutionPhase::Locked => {
             "run resume_move to continue execution"
-        },
+        }
         MoveExecutionPhase::Moved
         | MoveExecutionPhase::SourceScanned
         | MoveExecutionPhase::TargetScanned => {
             "run rollback_move for safety, or resume_move to retry"
-        },
+        }
         MoveExecutionPhase::Validated | MoveExecutionPhase::RolledBack => {
             "no recovery action needed"
-        },
+        }
     }
 }
 
 pub(super) fn rewrite_path_references(
-    plan: &MovePlan
+    plan: &MovePlan,
 ) -> MoveResult<(Vec<MovePathRewrite>, Vec<MoveManualFollowup>)> {
     let old_abs = normalize_slashes(&plan.source_entity_path);
     let new_abs = normalize_slashes(&plan.destination_entity_path);
 
     let mut relative_pairs = Vec::new();
     if let (Ok(old_rel), Ok(new_rel)) = (
-        safe_strip_prefix(
-            &plan.source_entity_path,
-            &plan.source_git_worktree_root,
-        ),
+        safe_strip_prefix(&plan.source_entity_path, &plan.source_git_worktree_root),
         safe_strip_prefix(
             &plan.destination_entity_path,
             &plan.source_git_worktree_root,
         ),
     ) {
-        relative_pairs
-            .push((normalize_slashes(&old_rel), normalize_slashes(&new_rel)));
+        relative_pairs.push((normalize_slashes(&old_rel), normalize_slashes(&new_rel)));
     }
     if let (Ok(old_rel), Ok(new_rel)) = (
-        safe_strip_prefix(
-            &plan.source_entity_path,
-            &plan.target_git_worktree_root,
-        ),
+        safe_strip_prefix(&plan.source_entity_path, &plan.target_git_worktree_root),
         safe_strip_prefix(
             &plan.destination_entity_path,
             &plan.target_git_worktree_root,
         ),
     ) {
-        relative_pairs
-            .push((normalize_slashes(&old_rel), normalize_slashes(&new_rel)));
+        relative_pairs.push((normalize_slashes(&old_rel), normalize_slashes(&new_rel)));
     }
 
     let mut rewritten = Vec::new();
@@ -568,8 +663,7 @@ pub(super) fn rewrite_path_references(
         let Ok(previous_content) = String::from_utf8(bytes) else {
             followups.push(MoveManualFollowup {
                 path: file_path,
-                reason: "binary or non-utf8 content requires manual rewrite"
-                    .to_string(),
+                reason: "binary or non-utf8 content requires manual rewrite".to_string(),
             });
             continue;
         };
@@ -653,19 +747,13 @@ pub(super) fn normalize_journal_entity_paths<D: MoveDomain + ?Sized>(
     }
 }
 
-pub(super) fn journal_path(
-    store_root: &Path,
-    id: Uuid,
-) -> PathBuf {
+pub(super) fn journal_path(store_root: &Path, id: Uuid) -> PathBuf {
     store_root
         .join(MOVE_JOURNALS_DIR)
         .join(format!("{}.json", id))
 }
 
-pub(super) fn move_set_journal_path(
-    store_root: &Path,
-    id: Uuid,
-) -> PathBuf {
+pub(super) fn move_set_journal_path(store_root: &Path, id: Uuid) -> PathBuf {
     store_root
         .join(MOVE_JOURNALS_DIR)
         .join(format!("{}.set.json", id))
@@ -677,10 +765,7 @@ pub(super) fn move_set_journal_path(
 /// persistence boundary: a journal missing authoritative identity, replay/
 /// rollback lineage, or deterministic mutation payload ownership is rejected
 /// and never written to disk.
-pub fn persist_journal(
-    store_root: &Path,
-    journal: &MoveJournal,
-) -> MoveResult<()> {
+pub fn persist_journal(store_root: &Path, journal: &MoveJournal) -> MoveResult<()> {
     // Compile-time check that MoveJournal implements InteroperableArtifact
     fn assert_interoperable<T: InteroperableArtifact>() {}
     assert_interoperable::<MoveJournal>();
@@ -690,46 +775,34 @@ pub fn persist_journal(
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let payload = serde_json::to_vec_pretty(journal)
-        .map_err(|error| MoveError::Domain(error.to_string()))?;
+    let payload =
+        serde_json::to_vec_pretty(journal).map_err(|error| MoveError::Domain(error.to_string()))?;
     fs::write(path, payload).map_err(MoveError::Io)
 }
 
 /// Load a move journal from the store root's `move-journals/` directory.
-pub fn load_journal(
-    store_root: &Path,
-    id: Uuid,
-) -> MoveResult<MoveJournal> {
-    let payload =
-        fs::read(journal_path(store_root, id)).map_err(MoveError::Io)?;
-    serde_json::from_slice(&payload)
-        .map_err(|error| MoveError::Domain(error.to_string()))
+pub fn load_journal(store_root: &Path, id: Uuid) -> MoveResult<MoveJournal> {
+    let payload = fs::read(journal_path(store_root, id)).map_err(MoveError::Io)?;
+    serde_json::from_slice(&payload).map_err(|error| MoveError::Domain(error.to_string()))
 }
 
 /// Persist one set-operation journal alongside legacy per-entity journals.
-pub fn persist_move_set_journal(
-    store_root: &Path,
-    journal: &MoveSetJournal,
-) -> MoveResult<()> {
+pub fn persist_move_set_journal(store_root: &Path, journal: &MoveSetJournal) -> MoveResult<()> {
     journal.validate()?;
     let path = move_set_journal_path(store_root, journal.id);
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let payload = serde_json::to_vec_pretty(journal)
-        .map_err(|error| MoveError::Domain(error.to_string()))?;
+    let payload =
+        serde_json::to_vec_pretty(journal).map_err(|error| MoveError::Domain(error.to_string()))?;
     fs::write(path, payload).map_err(MoveError::Io)
 }
 
 /// Load one set-operation journal from the source store.
-pub fn load_move_set_journal(
-    store_root: &Path,
-    id: Uuid,
-) -> MoveResult<MoveSetJournal> {
-    let payload = fs::read(move_set_journal_path(store_root, id))
-        .map_err(MoveError::Io)?;
-    let journal: MoveSetJournal = serde_json::from_slice(&payload)
-        .map_err(|error| MoveError::Domain(error.to_string()))?;
+pub fn load_move_set_journal(store_root: &Path, id: Uuid) -> MoveResult<MoveSetJournal> {
+    let payload = fs::read(move_set_journal_path(store_root, id)).map_err(MoveError::Io)?;
+    let journal: MoveSetJournal =
+        serde_json::from_slice(&payload).map_err(|error| MoveError::Domain(error.to_string()))?;
     journal.validate()?;
     Ok(journal)
 }
@@ -798,9 +871,7 @@ pub(super) fn git_tracked_path_reference_files(
             .map_err(|error| error.to_string())?;
 
         if !output.status.success() && output.status.code() != Some(1) {
-            return Err(String::from_utf8_lossy(&output.stderr)
-                .trim()
-                .to_string());
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
         }
 
         for line in String::from_utf8_lossy(&output.stdout).lines() {
@@ -848,9 +919,7 @@ pub(super) fn tracked_repo_for_file<'a>(
         candidates.push((target_repo_root, relative));
     }
 
-    candidates.sort_by_key(|(_, relative)| {
-        std::cmp::Reverse(relative.components().count())
-    });
+    candidates.sort_by_key(|(_, relative)| std::cmp::Reverse(relative.components().count()));
     candidates.into_iter().next()
 }
 
@@ -909,9 +978,7 @@ mod persist_journal_contract_tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             steps: vec!["created move journal".to_string()],
-            rollback_steps: vec![
-                "rename destination back to source".to_string(),
-            ],
+            rollback_steps: vec!["rename destination back to source".to_string()],
             lock_paths: Vec::new(),
             migrated_board_entries: Vec::new(),
             rewritten_path_files: Vec::new(),
@@ -931,9 +998,8 @@ mod persist_journal_contract_tests {
         journal.entity_id = Uuid::nil();
         journal.source_store_root = PathBuf::new();
 
-        let error = persist_journal(store.path(), &journal).expect_err(
-            "non-compliant journal must be rejected at persistence",
-        );
+        let error = persist_journal(store.path(), &journal)
+            .expect_err("non-compliant journal must be rejected at persistence");
         match error {
             MoveError::InteroperabilityContract {
                 artifact_class,
@@ -948,7 +1014,7 @@ mod persist_journal_contract_tests {
                     detail.contains("missing source store root"),
                     "unexpected detail: {detail}"
                 );
-            },
+            }
             other => panic!("unexpected error variant: {other:?}"),
         }
 
@@ -964,8 +1030,7 @@ mod persist_journal_contract_tests {
         let id = Uuid::new_v4();
         let journal = journal_with_id(id);
 
-        persist_journal(store.path(), &journal)
-            .expect("compliant journal must persist");
+        persist_journal(store.path(), &journal).expect("compliant journal must persist");
 
         assert!(
             journal_path(store.path(), id).exists(),
