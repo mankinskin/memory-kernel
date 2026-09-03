@@ -118,20 +118,28 @@ pub(super) fn advance_phase_planned(
     journal: &mut MoveJournal,
     journal_root: &Path,
     span: &tracing::Span,
+    skip_lock: bool,
 ) -> MoveResult<()> {
     if journal.phase != MoveExecutionPhase::Planned {
         return Ok(());
     }
 
     let started = Instant::now();
-    acquire_lock_set(&journal.lock_paths)?;
+    let step = if skip_lock {
+        // A set-level operation (`execute_move_set`) already acquired the
+        // union of these lock paths for the whole set before any entity
+        // started; re-acquiring the same lock files here would fail with
+        // "already held" instead of succeeding.
+        "source/target store locks already held by the enclosing move-set operation"
+    } else {
+        acquire_lock_set(&journal.lock_paths)?;
+        "acquired source/target store locks and move entity lock"
+    };
     record_phase_timing(journal, "lock_acquisition_ms", started.elapsed());
     journal.phase = MoveExecutionPhase::Locked;
     span.record("phase", phase_name(&journal.phase));
     journal.updated_at = Utc::now();
-    journal.steps.push(
-        "acquired source/target store locks and move entity lock".to_string(),
-    );
+    journal.steps.push(step.to_string());
     persist_journal(journal_root, journal)?;
     tracing::debug!(
         target: MOVE_TRACE_TARGET,
@@ -654,6 +662,15 @@ pub(super) fn journal_path(
         .join(format!("{}.json", id))
 }
 
+pub(super) fn move_set_journal_path(
+    store_root: &Path,
+    id: Uuid,
+) -> PathBuf {
+    store_root
+        .join(MOVE_JOURNALS_DIR)
+        .join(format!("{}.set.json", id))
+}
+
 /// Persist a move journal under the store root's `move-journals/` directory.
 ///
 /// Enforces the journal-backed operation interoperability contract at this
@@ -687,6 +704,34 @@ pub fn load_journal(
         fs::read(journal_path(store_root, id)).map_err(MoveError::Io)?;
     serde_json::from_slice(&payload)
         .map_err(|error| MoveError::Domain(error.to_string()))
+}
+
+/// Persist one set-operation journal alongside legacy per-entity journals.
+pub fn persist_move_set_journal(
+    store_root: &Path,
+    journal: &MoveSetJournal,
+) -> MoveResult<()> {
+    journal.validate()?;
+    let path = move_set_journal_path(store_root, journal.id);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let payload = serde_json::to_vec_pretty(journal)
+        .map_err(|error| MoveError::Domain(error.to_string()))?;
+    fs::write(path, payload).map_err(MoveError::Io)
+}
+
+/// Load one set-operation journal from the source store.
+pub fn load_move_set_journal(
+    store_root: &Path,
+    id: Uuid,
+) -> MoveResult<MoveSetJournal> {
+    let payload = fs::read(move_set_journal_path(store_root, id))
+        .map_err(MoveError::Io)?;
+    let journal: MoveSetJournal = serde_json::from_slice(&payload)
+        .map_err(|error| MoveError::Domain(error.to_string()))?;
+    journal.validate()?;
+    Ok(journal)
 }
 
 pub(super) fn classify_git_worktree_topology(

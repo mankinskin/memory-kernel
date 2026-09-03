@@ -245,6 +245,97 @@ pub trait MoveDomain {
         let _ = touched_entity_ids;
         self.scan_store(store_root)
     }
+
+    /// Related entities for every id in `entity_ids`, keyed by entity id.
+    ///
+    /// **Compatibility fallback**: the default implementation loops
+    /// [`MoveDomain::related_entities`] once per id, which is exactly the
+    /// per-entity edge rescan documented as finding F2 in the Waypoint A
+    /// benchmark review. Domains that can answer the whole set from one bulk
+    /// edge-table query (e.g. `edges_from_ids` / `edges_to_ids`) should
+    /// override this hook to remove the repeated scan; [`plan_move_set`]
+    /// calls this hook exactly once for the whole move set regardless of
+    /// which implementation runs.
+    fn related_entities_for_set(
+        &self,
+        entity_ids: &[Uuid],
+    ) -> MoveResult<std::collections::BTreeMap<Uuid, MoveReferences>> {
+        let mut result = std::collections::BTreeMap::new();
+        for entity_id in entity_ids {
+            result.insert(*entity_id, self.related_entities(entity_id)?);
+        }
+        Ok(result)
+    }
+
+    /// Whether each of `entity_ids` is indexed by the store rooted at
+    /// `store_root`, keyed by entity id.
+    ///
+    /// **Compatibility fallback**: the default implementation loops
+    /// [`MoveDomain::entity_indexed_in`] once per id, reopening whatever
+    /// store/connection that hook opens each time — the repeated
+    /// destination-store open documented as finding F3. Domains that can open
+    /// one destination read context and answer membership for every id in one
+    /// query should override this hook.
+    fn entity_indexed_in_many(
+        &self,
+        store_root: &Path,
+        entity_ids: &[Uuid],
+    ) -> MoveResult<std::collections::BTreeMap<Uuid, bool>> {
+        let mut result = std::collections::BTreeMap::new();
+        for entity_id in entity_ids {
+            result.insert(
+                *entity_id,
+                self.entity_indexed_in(store_root, entity_id)?,
+            );
+        }
+        Ok(result)
+    }
+
+    /// Board rows for every id in `entity_ids`, keyed by entity id.
+    ///
+    /// **Compatibility fallback**: the default implementation loops
+    /// [`MoveDomain::board_state`] once per id, the repeated full
+    /// active/history board scan documented as finding F4. Domains with a
+    /// board should override this with one targeted/bulk read for the whole
+    /// set (e.g. one query filtered to `entity_ids`).
+    fn board_state_for_set(
+        &self,
+        entity_ids: &[Uuid],
+    ) -> MoveResult<std::collections::BTreeMap<Uuid, MoveBoardState>> {
+        let mut result = std::collections::BTreeMap::new();
+        for entity_id in entity_ids {
+            result.insert(*entity_id, self.board_state(entity_id)?);
+        }
+        Ok(result)
+    }
+
+    /// Active leases for every id in `entity_ids`, keyed by entity id.
+    ///
+    /// **Compatibility fallback**: the default implementation loops
+    /// [`MoveDomain::active_leases`] once per id, the repeated full lease-table
+    /// scan documented as finding F4. Domains with a lease table should
+    /// override this with one targeted/bulk read for the whole set.
+    fn active_leases_for_set(
+        &self,
+        entity_ids: &[Uuid],
+    ) -> MoveResult<std::collections::BTreeMap<Uuid, Vec<MoveLeaseBlock>>> {
+        let mut result = std::collections::BTreeMap::new();
+        for entity_id in entity_ids {
+            result.insert(*entity_id, self.active_leases(entity_id)?);
+        }
+        Ok(result)
+    }
+}
+
+/// Deterministically normalize a caller-supplied entity-id selection: sort
+/// ascending and remove duplicates.
+///
+/// [`plan_move_set`] applies this before planning so a set plan's identity
+/// and lock-path union are reproducible regardless of caller-supplied order
+/// or accidental duplicate ids.
+pub fn normalize_entity_selection(entity_ids: &[Uuid]) -> Vec<Uuid> {
+    let deduped: BTreeSet<Uuid> = entity_ids.iter().copied().collect();
+    deduped.into_iter().collect()
 }
 
 /// Read-only preflight plan for a move.
@@ -485,6 +576,162 @@ pub struct MoveOutcome {
     pub journal: MoveJournal,
     pub resumed: bool,
     pub rolled_back: bool,
+}
+
+/// Read-only preflight plan for moving a normalized set of entities to one
+/// target workspace.
+///
+/// `entity_ids` is sorted/deduplicated by [`normalize_entity_selection`].
+/// Shared preflight work — store-root resolution, git worktree topology,
+/// target-store presence, and the bulk [`MoveDomain`] set hooks — is computed
+/// once for the whole set and threaded into each entry of `entity_plans`, so
+/// a set of N entities does not repeat that discovery N times even when the
+/// domain has not opted into the bulk hooks (in that case the bulk hooks'
+/// default fallback still loops once per entity, but from one call site).
+/// Per-entity results (source path resolution, path-reference file scan,
+/// board/lease blockers) remain per entity so blocker attribution stays
+/// entity-specific.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MoveSetPlan {
+    pub entity_ids: Vec<Uuid>,
+    #[serde(
+        serialize_with = "serialize_normalized_path",
+        deserialize_with = "deserialize_pathbuf"
+    )]
+    pub target_workspace_root: PathBuf,
+    #[serde(
+        serialize_with = "serialize_normalized_path",
+        deserialize_with = "deserialize_pathbuf"
+    )]
+    pub source_store_root: PathBuf,
+    #[serde(
+        serialize_with = "serialize_normalized_path",
+        deserialize_with = "deserialize_pathbuf"
+    )]
+    pub target_store_root: PathBuf,
+    #[serde(
+        serialize_with = "serialize_normalized_path",
+        deserialize_with = "deserialize_pathbuf"
+    )]
+    pub source_git_worktree_root: PathBuf,
+    #[serde(
+        serialize_with = "serialize_normalized_path",
+        deserialize_with = "deserialize_pathbuf"
+    )]
+    pub target_git_worktree_root: PathBuf,
+    pub git_worktree_topology: GitWorktreeTopology,
+    pub target_store_present: bool,
+    pub entity_plans: Vec<MovePlan>,
+    pub captured_at: chrono::DateTime<Utc>,
+}
+
+impl MoveSetPlan {
+    /// The set move is supported only when every entity plan has no blockers.
+    pub fn supported(&self) -> bool {
+        !self.entity_plans.is_empty()
+            && self.entity_plans.iter().all(MovePlan::supported)
+    }
+
+    /// All blockers across every entity plan, in `entity_plans` order.
+    pub fn blockers(&self) -> Vec<&MoveBlocker> {
+        self.entity_plans
+            .iter()
+            .flat_map(|plan| plan.blockers.iter())
+            .collect()
+    }
+}
+
+/// Result of a set-level journaled move execution.
+///
+/// Each entity in the set is still executed with its own [`MoveJournal`] (see
+/// [`execute_move_set`]'s documentation for why a combined single-journal
+/// schema is not implemented in this package), so any entity's outcome can be
+/// independently resumed or rolled back via the existing
+/// [`resume_move`]/[`rollback_move`] using `entity_outcomes[i].journal.id`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MoveSetOutcome {
+    pub journal: MoveSetJournal,
+    pub entity_ids: Vec<Uuid>,
+    pub entity_outcomes: Vec<MoveOutcome>,
+}
+
+/// Durable phase of a set-level move operation.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum MoveSetExecutionPhase {
+    Planned,
+    InProgress,
+    Validated,
+    RolledBack,
+}
+
+/// Durable operation record for a normalized set move.
+///
+/// The immutable [`MoveSetPlan`] payload lets recovery continue an interrupted
+/// operation without rebuilding preflight state. `entity_journal_ids` retains
+/// the compatibility journals used by the established single-entity APIs.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MoveSetJournal {
+    pub id: Uuid,
+    pub entity_ids: Vec<Uuid>,
+    #[serde(
+        serialize_with = "serialize_normalized_path",
+        deserialize_with = "deserialize_pathbuf"
+    )]
+    pub source_store_root: PathBuf,
+    #[serde(
+        serialize_with = "serialize_normalized_path",
+        deserialize_with = "deserialize_pathbuf"
+    )]
+    pub target_store_root: PathBuf,
+    pub entity_plans: Vec<MovePlan>,
+    pub entity_journal_ids: std::collections::BTreeMap<Uuid, Uuid>,
+    #[serde(
+        serialize_with = "serialize_normalized_path_vec",
+        deserialize_with = "deserialize_pathbuf_vec"
+    )]
+    pub lock_paths: Vec<PathBuf>,
+    pub phase: MoveSetExecutionPhase,
+    pub created_at: chrono::DateTime<Utc>,
+    pub updated_at: chrono::DateTime<Utc>,
+    #[serde(default)]
+    pub completed_entity_ids: Vec<Uuid>,
+    #[serde(default)]
+    pub rollback_completed_entity_ids: Vec<Uuid>,
+    #[serde(default)]
+    pub entity_errors: std::collections::BTreeMap<Uuid, String>,
+    pub failure: Option<String>,
+    #[serde(default)]
+    pub next_recovery_step: Option<String>,
+}
+
+impl MoveSetJournal {
+    /// Validate the immutable selection, plan payload, and recovery identity.
+    pub fn validate(&self) -> MoveResult<()> {
+        if self.id.is_nil()
+            || self.entity_ids.is_empty()
+            || self.source_store_root.as_os_str().is_empty()
+            || self.target_store_root.as_os_str().is_empty()
+            || self.entity_ids != normalize_entity_selection(&self.entity_ids)
+            || self.entity_plans.len() != self.entity_ids.len()
+            || self.entity_journal_ids.len() != self.entity_ids.len()
+        {
+            return Err(MoveError::Domain(
+                "move set journal is missing valid immutable operation state"
+                    .to_string(),
+            ));
+        }
+        let planned_ids = normalize_entity_selection(
+            &self.entity_plans.iter().map(|plan| plan.entity_id).collect::<Vec<_>>(),
+        );
+        let journal_ids = self.entity_journal_ids.keys().copied().collect::<Vec<_>>();
+        if planned_ids != self.entity_ids || journal_ids != self.entity_ids {
+                return Err(MoveError::Domain(
+                    "move set journal entity plan does not match selection"
+                        .to_string(),
+                ));
+        }
+        Ok(())
+    }
 }
 
 impl InteroperableArtifact for MoveJournal {

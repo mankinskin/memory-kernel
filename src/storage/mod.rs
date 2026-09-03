@@ -21,7 +21,10 @@ pub use move_kernel::{
     GitWorktreeTopology, MoveBlocker, MoveBoardState, MoveDomain, MoveError,
     MoveExecutionPhase, MoveJournal, MoveLeaseBlock, MoveManualFollowup,
     MoveOutcome, MovePathRewrite, MovePlan, MoveReferenceDirection,
-    MoveReferenceVisibility, MoveReferences, MoveResult,
+    MoveReferenceVisibility, MoveReferences, MoveResult, MoveSetOutcome,
+    MoveSetExecutionPhase, MoveSetJournal, MoveSetPlan, execute_move_set,
+    normalize_entity_selection, plan_move_set, rollback_move_set,
+    resume_move_set,
 };
 pub use open_or_init::{NotFoundError, Opened, open_or_init};
 pub use watcher::{WatchHandle, run_watch_loop};
