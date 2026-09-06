@@ -787,7 +787,10 @@ pub fn discover_workspace_scan_roots_with_policy(
     let mut store_roots = Vec::new();
 
     // The active workspace root store is always included when present.
-    let root_store = workspace_root.join(store_dir);
+    let root_store = resolve_store_root_for_initialization_from(
+        &workspace_root,
+        store_dir,
+    );
     if root_store.is_dir() {
         store_roots.push(normalize_working_dir_path(&root_store));
     }

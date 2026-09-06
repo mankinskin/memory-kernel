@@ -73,8 +73,10 @@ pub fn plan_move<D: MoveDomain + ?Sized>(
     let source_store_root = domain.source_store_root();
     let source_workspace_root =
         crate::workspace::resolve_workspace_root_from_store_root(&source_store_root, &index_dir);
-    let target_store_root =
-        crate::workspace::resolve_store_root_from(target_workspace_root, &index_dir);
+    let target_store_root = crate::workspace::resolve_store_root_for_initialization_from(
+        target_workspace_root,
+        &index_dir,
+    );
 
     let subdir = domain.entity_subdir().to_string();
     let source_entity_path = domain.source_entity_path(entity_id)?;
@@ -207,8 +209,10 @@ pub fn plan_move_set<D: MoveDomain + ?Sized>(
     let source_store_root = domain.source_store_root();
     let source_workspace_root =
         crate::workspace::resolve_workspace_root_from_store_root(&source_store_root, &index_dir);
-    let target_store_root =
-        crate::workspace::resolve_store_root_from(target_workspace_root, &index_dir);
+    let target_store_root = crate::workspace::resolve_store_root_for_initialization_from(
+        target_workspace_root,
+        &index_dir,
+    );
 
     let source_git_root = git_toplevel(&source_workspace_root).map_err(MoveError::Domain)?;
     let mut shared_blockers = Vec::new();
