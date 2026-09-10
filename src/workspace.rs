@@ -787,10 +787,7 @@ pub fn discover_workspace_scan_roots_with_policy(
     let mut store_roots = Vec::new();
 
     // The active workspace root store is always included when present.
-    let root_store = resolve_store_root_for_initialization_from(
-        &workspace_root,
-        store_dir,
-    );
+    let root_store = resolve_store_root_at_workspace(&workspace_root, store_dir).store_root;
     if root_store.is_dir() {
         store_roots.push(normalize_working_dir_path(&root_store));
     }
@@ -939,7 +936,7 @@ fn normalize_working_dir_path(path: &Path) -> PathBuf {
         if let Some(normalized) = normalize_git_bash_pwd(&raw) {
             return PathBuf::from(normalized);
         }
-        return PathBuf::from(raw.replace('\\', "/"));
+        return path.to_path_buf();
     }
 
     #[cfg(not(windows))]

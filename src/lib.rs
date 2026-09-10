@@ -5,6 +5,7 @@ pub mod generated_markdown;
 pub mod index_generator;
 pub mod interoperability;
 pub mod model;
+pub mod operation_journal;
 pub mod query;
 pub mod runtime;
 pub mod storage;
@@ -27,6 +28,11 @@ pub use discovery::{
     StoreReport, discover_stores, reconcile_stores, summarize,
 };
 pub use interoperability::InteroperableArtifact;
+pub use operation_journal::{
+    OPERATION_JOURNAL_SCHEMA_VERSION, OperationJournal, OperationJournalLinks,
+    OperationJournalPhase, OperationJournalStep, OperationPreflight,
+    OperationRecovery, OperationReversibility,
+};
 pub use model::{
     index_entry::{
         ContentKind, IndexEntry, IndexRef, IndexRelations, RelationKind,
