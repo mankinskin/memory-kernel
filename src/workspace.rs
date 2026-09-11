@@ -401,10 +401,10 @@ pub fn resolve_store_root_from_with_diagnostics(
 ) -> StoreRootResolution {
     let normalized = normalize_working_dir_path(start);
     if is_store_root(&normalized, dir_name) {
-        return resolve_store_root_at_workspace(
-            &resolve_workspace_root_from_store_root(&normalized, dir_name),
-            dir_name,
-        );
+        return StoreRootResolution {
+            store_root: normalized,
+            diagnostics: Vec::new(),
+        };
     }
 
     let dir = start_dir(&normalized);
@@ -422,10 +422,12 @@ pub fn resolve_store_root_from_with_diagnostics(
         }
         match workspace.parent() {
             Some(parent) => workspace = parent,
-            None => return StoreRootResolution {
-                store_root: dir.to_path_buf(),
-                diagnostics: Vec::new(),
-            },
+            None => {
+                return StoreRootResolution {
+                    store_root: start_dir(&normalized).join(dir_name),
+                    diagnostics: Vec::new(),
+                };
+            }
         }
     }
 }
@@ -993,7 +995,13 @@ fn store_domain(dir_name: &str) -> &str {
     dir_name.trim_start_matches('.')
 }
 
-fn canonical_store_root(workspace: &Path, dir_name: &str) -> PathBuf {
+/// The canonical `.workflow-tools/<domain>` location for a store at
+/// `workspace`, whether or not it exists yet.
+///
+/// Use this when creating a new store so it lands in the canonical layout
+/// instead of the legacy bare `<dir_name>` path that
+/// [`resolve_store_root_at_fixed_workspace`] still returns as its default.
+pub fn canonical_store_root(workspace: &Path, dir_name: &str) -> PathBuf {
     workspace.join(CANONICAL_STORES_DIR).join(store_domain(dir_name))
 }
 
@@ -1021,6 +1029,9 @@ pub fn resolve_store_root_at_fixed_workspace(
     dir_name: &str,
 ) -> PathBuf {
     let normalized = normalize_working_dir_path(workspace);
+    if is_store_root(&normalized, dir_name) {
+        return normalized;
+    }
     find_store_at_workspace(&normalized, dir_name).unwrap_or_else(|| normalized.join(dir_name))
 }
 
