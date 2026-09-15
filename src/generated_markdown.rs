@@ -8,11 +8,7 @@ pub struct GeneratedMarkdownSnippet<'a> {
 }
 
 impl<'a> GeneratedMarkdownSnippet<'a> {
-    pub fn new<I, S, B>(
-        id: I,
-        slug: Option<S>,
-        body: B,
-    ) -> Self
+    pub fn new<I, S, B>(id: I, slug: Option<S>, body: B) -> Self
     where
         I: Into<Cow<'a, str>>,
         S: Into<Cow<'a, str>>,
@@ -53,10 +49,7 @@ pub enum ParseGeneratedMarkdownError {
 }
 
 impl std::fmt::Display for ParseGeneratedMarkdownError {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::MissingGeneratedFileComment => write!(
                 f,
@@ -64,10 +57,10 @@ impl std::fmt::Display for ParseGeneratedMarkdownError {
             ),
             Self::MalformedEntryComment(line) => {
                 write!(f, "malformed generated entry comment: {line}")
-            },
+            }
             Self::NoEntriesFound => {
                 write!(f, "generated artifact contains no entry comments")
-            },
+            }
         }
     }
 }
@@ -75,10 +68,7 @@ impl std::fmt::Display for ParseGeneratedMarkdownError {
 impl std::error::Error for ParseGeneratedMarkdownError {}
 
 impl<'a> GeneratedMarkdownConfig<'a> {
-    pub fn new<I, E>(
-        file_comment: I,
-        entry_prefix: E,
-    ) -> Self
+    pub fn new<I, E>(file_comment: I, entry_prefix: E) -> Self
     where
         I: Into<Cow<'a, str>>,
         E: Into<Cow<'a, str>>,
@@ -150,10 +140,7 @@ pub fn render_markdown_file(
     rendered
 }
 
-pub fn prepare_generated_output(
-    rendered: &str,
-    existing: Option<&str>,
-) -> String {
+pub fn prepare_generated_output(rendered: &str, existing: Option<&str>) -> String {
     let normalized = normalize_newlines_to_lf(rendered);
     existing
         .map(|text| apply_existing_line_endings(&normalized, text))
@@ -286,11 +273,9 @@ fn parse_entry_marker_line(
     for token in attrs.split_whitespace() {
         if let Some(value) = token.strip_prefix("id=") {
             if value.is_empty() {
-                return Err(
-                    ParseGeneratedMarkdownError::MalformedEntryComment(
-                        line.to_string(),
-                    ),
-                );
+                return Err(ParseGeneratedMarkdownError::MalformedEntryComment(
+                    line.to_string(),
+                ));
             }
             id = Some(value.to_string());
         } else if let Some(value) = token.strip_prefix("slug=") {
@@ -308,10 +293,7 @@ fn parse_entry_marker_line(
     Ok(Some((id, slug)))
 }
 
-fn reattach_frontmatter(
-    frontmatter: &str,
-    body: &str,
-) -> String {
+fn reattach_frontmatter(frontmatter: &str, body: &str) -> String {
     if body.is_empty() {
         format!("{}\n", frontmatter.trim_end())
     } else {
@@ -341,14 +323,9 @@ fn normalize_newlines_to_lf(text: &str) -> String {
     text.replace("\r\n", "\n").replace('\r', "\n")
 }
 
-fn apply_existing_line_endings(
-    rendered: &str,
-    existing: &str,
-) -> String {
+fn apply_existing_line_endings(rendered: &str, existing: &str) -> String {
     let endings = collect_line_endings(existing);
-    if endings.is_empty()
-        || endings.iter().all(|ending| *ending == LineEnding::Lf)
-    {
+    if endings.is_empty() || endings.iter().all(|ending| *ending == LineEnding::Lf) {
         return rendered.to_string();
     }
 
@@ -395,14 +372,14 @@ fn collect_line_endings(text: &str) -> Vec<LineEnding> {
             b'\r' if index + 1 < bytes.len() && bytes[index + 1] == b'\n' => {
                 endings.push(LineEnding::Crlf);
                 index += 2;
-            },
+            }
             b'\n' => {
                 endings.push(LineEnding::Lf);
                 index += 1;
-            },
+            }
             _ => {
                 index += 1;
-            },
+            }
         }
     }
 
@@ -426,16 +403,12 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::{
-        GeneratedMarkdownConfig, GeneratedMarkdownSnippet,
-        ParseGeneratedMarkdownError, parse_generated_artifact,
-        prepare_generated_output, render_markdown_file,
+        parse_generated_artifact, prepare_generated_output, render_markdown_file,
+        GeneratedMarkdownConfig, GeneratedMarkdownSnippet, ParseGeneratedMarkdownError,
     };
 
     fn rule_like_config() -> GeneratedMarkdownConfig<'static> {
-        GeneratedMarkdownConfig::new(
-            "<!-- generated:file true -->",
-            "generated:entry",
-        )
+        GeneratedMarkdownConfig::new("<!-- generated:file true -->", "generated:entry")
     }
 
     #[test]
@@ -491,18 +464,15 @@ mod tests {
 
     #[test]
     fn prepare_generated_output_reuses_existing_mixed_newline_sequence() {
-        let prepared = prepare_generated_output(
-            "first\nsecond\nthird\n",
-            Some("old\r\ncontent\nblock\r\n"),
-        );
+        let prepared =
+            prepare_generated_output("first\nsecond\nthird\n", Some("old\r\ncontent\nblock\r\n"));
 
         assert_eq!(prepared, "first\r\nsecond\nthird\r\n");
     }
 
     #[test]
     fn prepare_generated_output_normalizes_new_files_to_lf() {
-        let prepared =
-            prepare_generated_output("first\r\nsecond\r\nthird\n", None);
+        let prepared = prepare_generated_output("first\r\nsecond\r\nthird\n", None);
 
         assert_eq!(prepared, "first\nsecond\nthird\n");
     }
@@ -530,9 +500,8 @@ mod tests {
 
     #[test]
     fn parse_generated_artifact_rejects_non_generated_file() {
-        let error =
-            parse_generated_artifact("# not generated", &rule_like_config())
-                .expect_err("must fail");
+        let error = parse_generated_artifact("# not generated", &rule_like_config())
+            .expect_err("must fail");
         assert_eq!(
             error,
             ParseGeneratedMarkdownError::MissingGeneratedFileComment
@@ -549,8 +518,8 @@ mod tests {
             "beta\r\n",
         );
 
-        let parsed = parse_generated_artifact(input, &rule_like_config())
-            .expect("parse generated artifact");
+        let parsed =
+            parse_generated_artifact(input, &rule_like_config()).expect("parse generated artifact");
         assert_eq!(parsed.entries.len(), 2);
         assert_eq!(parsed.entries[0].body, "alpha");
         assert_eq!(parsed.entries[1].body, "beta");

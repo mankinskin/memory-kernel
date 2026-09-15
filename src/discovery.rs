@@ -60,19 +60,13 @@ pub fn discover_stores(root: &Path) -> Vec<DiscoveredStore> {
     found
 }
 
-fn walk(
-    dir: &Path,
-    depth: usize,
-    visited: &mut BTreeSet<PathBuf>,
-    out: &mut Vec<DiscoveredStore>,
-) {
+fn walk(dir: &Path, depth: usize, visited: &mut BTreeSet<PathBuf>, out: &mut Vec<DiscoveredStore>) {
     if depth > MAX_DISCOVERY_DEPTH {
         return;
     }
 
     // Loop-safety: dedup on canonical path so a symlink cycle terminates.
-    let canonical =
-        std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
+    let canonical = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
     if !visited.insert(canonical) {
         return;
     }
@@ -94,8 +88,7 @@ fn walk(
         };
 
         let in_canonical_container =
-            dir.file_name().and_then(|name| name.to_str())
-                == Some(".workflow-tools");
+            dir.file_name().and_then(|name| name.to_str()) == Some(".workflow-tools");
         let kind = if in_canonical_container {
             canonical_store_kind_for(name)
         } else {
@@ -183,15 +176,10 @@ pub struct ReconcileSummary {
 /// Non-destructive: a store missing now is reported `Absent` (diagnostic) rather
 /// than dropped, and a newly appeared store is `Discovered`, so late onboarding
 /// needs no rebuild. Reports are sorted for deterministic scan output.
-pub fn reconcile_stores(
-    previous: &[DiscoveredStore],
-    root: &Path,
-) -> Vec<StoreReport> {
+pub fn reconcile_stores(previous: &[DiscoveredStore], root: &Path) -> Vec<StoreReport> {
     let current = discover_stores(root);
-    let prev: BTreeSet<_> =
-        previous.iter().map(|s| s.store_root.clone()).collect();
-    let cur: BTreeSet<_> =
-        current.iter().map(|s| s.store_root.clone()).collect();
+    let prev: BTreeSet<_> = previous.iter().map(|s| s.store_root.clone()).collect();
+    let cur: BTreeSet<_> = current.iter().map(|s| s.store_root.clone()).collect();
 
     let mut reports: Vec<StoreReport> = current
         .iter()
@@ -238,10 +226,7 @@ mod tests {
     use super::*;
     use std::collections::HashSet;
 
-    fn mk(
-        root: &Path,
-        rel: &str,
-    ) {
+    fn mk(root: &Path, rel: &str) {
         std::fs::create_dir_all(root.join(rel)).unwrap();
     }
 
@@ -254,8 +239,7 @@ mod tests {
         mk(root, "sub/nested/.rule");
         mk(root, "sub/.test");
 
-        let kinds: HashSet<_> =
-            discover_stores(root).into_iter().map(|s| s.kind).collect();
+        let kinds: HashSet<_> = discover_stores(root).into_iter().map(|s| s.kind).collect();
         assert!(kinds.contains(&ContentKind::Ticket));
         assert!(kinds.contains(&ContentKind::Spec));
         assert!(kinds.contains(&ContentKind::Rule));

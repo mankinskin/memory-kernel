@@ -1,5 +1,5 @@
 use chrono::Utc;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use uuid::Uuid;
 
 use super::*;
@@ -155,11 +155,9 @@ fn manifest_partialeq_holds_after_roundtrip() {
 
 #[test]
 fn created_at_is_preserved_exactly() {
-    let fixed = chrono::DateTime::parse_from_rfc3339(
-        "2026-04-08T14:20:50.462259100+00:00",
-    )
-    .unwrap()
-    .with_timezone(&Utc);
+    let fixed = chrono::DateTime::parse_from_rfc3339("2026-04-08T14:20:50.462259100+00:00")
+        .unwrap()
+        .with_timezone(&Utc);
     let manifest = EntityManifest::new(Uuid::new_v4(), fixed);
     let parsed = roundtrip(&manifest);
     assert_eq!(
@@ -184,10 +182,7 @@ fn roundtrip_string_with_backslash() {
 
 #[test]
 fn roundtrip_string_with_embedded_newline() {
-    let manifest = make_manifest(&[(
-        "acceptance_criteria",
-        "line one\nline two\nline three",
-    )]);
+    let manifest = make_manifest(&[("acceptance_criteria", "line one\nline two\nline three")]);
     let parsed = roundtrip(&manifest);
     assert_eq!(
         parsed.extra["acceptance_criteria"],
@@ -300,15 +295,13 @@ fn roundtrip_boolean_and_number() {
 
 #[test]
 fn is_canonically_ordered_detects_wrong_order() {
-    let toml =
-        "id = \"1\"\ncreated_at = \"t\"\nstate = \"new\"\ntitle = \"x\"\n";
+    let toml = "id = \"1\"\ncreated_at = \"t\"\nstate = \"new\"\ntitle = \"x\"\n";
     assert!(!is_canonically_ordered(toml));
 }
 
 #[test]
 fn is_canonically_ordered_accepts_correct_order() {
-    let toml =
-        "id = \"1\"\ncreated_at = \"t\"\ntitle = \"x\"\nstate = \"new\"\n";
+    let toml = "id = \"1\"\ncreated_at = \"t\"\ntitle = \"x\"\nstate = \"new\"\n";
     assert!(is_canonically_ordered(toml));
 }
 
@@ -355,10 +348,9 @@ fn canonical_order_for_keys_sorts_remainder_alphabetically() {
 #[test]
 fn null_element_in_array_is_dropped_not_emitted_as_empty_string() {
     let mut manifest = EntityManifest::new(Uuid::new_v4(), Utc::now());
-    manifest.extra.insert(
-        "labels".into(),
-        json!(["keep-one", null, "keep-two"]),
-    );
+    manifest
+        .extra
+        .insert("labels".into(), json!(["keep-one", null, "keep-two"]));
 
     let toml = format_manifest_toml(&manifest);
     assert!(
@@ -377,10 +369,9 @@ fn null_element_in_array_is_dropped_not_emitted_as_empty_string() {
 #[test]
 fn null_value_in_inline_table_is_omitted_not_emitted_as_empty_string() {
     let mut manifest = EntityManifest::new(Uuid::new_v4(), Utc::now());
-    manifest.extra.insert(
-        "metadata".into(),
-        json!({"keep": "value", "drop_me": null}),
-    );
+    manifest
+        .extra
+        .insert("metadata".into(), json!({"keep": "value", "drop_me": null}));
 
     let toml = format_manifest_toml(&manifest);
     assert!(

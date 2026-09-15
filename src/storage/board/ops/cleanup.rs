@@ -9,8 +9,8 @@ use crate::storage::{
 
 use super::{
     super::{
-        BoardCleanPreview, BoardCleanResult, BoardEntryStatus, BoardError,
-        compute_clean_token, db_err, parse_clean_token,
+        compute_clean_token, db_err, parse_clean_token, BoardCleanPreview, BoardCleanResult,
+        BoardEntryStatus, BoardError,
     },
     load_all_entries, read_board_config,
 };
@@ -28,8 +28,7 @@ impl RedbIndexStore {
                 .filter(|entry| {
                     matches!(
                         entry.status,
-                        BoardEntryStatus::Completed
-                            | BoardEntryStatus::Conflict
+                        BoardEntryStatus::Completed | BoardEntryStatus::Conflict
                     ) || (include_stale && entry.is_stale_at(now))
                 })
                 .map(|entry| entry.entry_id)
@@ -63,8 +62,7 @@ impl RedbIndexStore {
                 .filter(|entry| {
                     matches!(
                         entry.status,
-                        BoardEntryStatus::Completed
-                            | BoardEntryStatus::Conflict
+                        BoardEntryStatus::Completed | BoardEntryStatus::Conflict
                     ) || (include_stale && entry.is_stale_at(now))
                 })
                 .map(|entry| entry.entry_id)
@@ -109,9 +107,7 @@ impl RedbIndexStore {
 
             for key in &to_remove {
                 conn.execute(
-                    &format!(
-                        "DELETE FROM {TABLE_BOARD_ACTIVE_INDEX} WHERE key = ?1"
-                    ),
+                    &format!("DELETE FROM {TABLE_BOARD_ACTIVE_INDEX} WHERE key = ?1"),
                     params![key],
                 )
                 .map_err(db_err)?;

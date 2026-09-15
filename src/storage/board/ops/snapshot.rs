@@ -6,17 +6,14 @@ use crate::storage::index::RedbIndexStore;
 
 use super::{
     super::{
-        ActiveWorktree, BoardEntry, BoardEntryStatus, BoardError,
-        BoardHistorySnapshot, BoardSnapshot,
+        ActiveWorktree, BoardEntry, BoardEntryStatus, BoardError, BoardHistorySnapshot,
+        BoardSnapshot,
     },
     load_all_entries, read_board_config,
 };
 
 impl RedbIndexStore {
-    pub fn board_snapshot(
-        &self,
-        agent_id: Option<&str>,
-    ) -> Result<BoardSnapshot, BoardError> {
+    pub fn board_snapshot(&self, agent_id: Option<&str>) -> Result<BoardSnapshot, BoardError> {
         self.with_db_ext(|conn| {
             let now = Utc::now();
             let config = read_board_config(conn)?;
@@ -152,11 +149,7 @@ impl RedbIndexStore {
             let history_cutoff = if config.completed_audit_window_secs == 0 {
                 None
             } else {
-                Some(
-                    now - Duration::seconds(
-                        config.completed_audit_window_secs as i64,
-                    ),
-                )
+                Some(now - Duration::seconds(config.completed_audit_window_secs as i64))
             };
 
             let completed_entries: Vec<BoardEntry> = load_all_entries(conn)?
@@ -168,9 +161,7 @@ impl RedbIndexStore {
             let mut entries: Vec<BoardEntry> = completed_entries
                 .into_iter()
                 .filter(|entry| {
-                    history_cutoff.map_or(true, |cutoff| {
-                        effective_completed_at(entry) >= cutoff
-                    })
+                    history_cutoff.map_or(true, |cutoff| effective_completed_at(entry) >= cutoff)
                 })
                 .collect();
             entries.sort_by(|left, right| {
@@ -189,8 +180,7 @@ impl RedbIndexStore {
             Ok(BoardHistorySnapshot {
                 captured_at: now,
                 completed_count: entries.len() as u32,
-                hidden_completed_count: total_completed_count
-                    .saturating_sub(entries.len() as u32),
+                hidden_completed_count: total_completed_count.saturating_sub(entries.len() as u32),
                 entries,
                 caller_entries,
                 config,

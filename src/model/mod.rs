@@ -1,10 +1,16 @@
+pub mod domain;
+pub mod domain_manifest;
 pub mod edge;
 pub mod entity;
+pub mod event;
 pub mod filesystem;
+pub mod hook;
 pub mod index_entry;
 pub mod index_sidecar;
 pub mod manifest_format;
+pub mod migration;
 pub mod query;
 pub mod schema;
 pub mod schema_registry;
 pub mod urn;
+pub mod workspace_capability;

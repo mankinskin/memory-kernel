@@ -43,9 +43,7 @@ where
 {
     match open() {
         Ok(store) => Ok(Opened::Existing(store)),
-        Err(error) if error.is_workspace_not_found() =>
-            init().map(Opened::Initialized),
+        Err(error) if error.is_workspace_not_found() => init().map(Opened::Initialized),
         Err(error) => Err(error),
     }
 }
-

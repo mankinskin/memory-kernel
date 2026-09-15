@@ -8,9 +8,7 @@ use crate::storage::{
 };
 
 use super::{
-    super::{
-        BoardEntry, BoardEntryStatus, BoardError, db_err, serialize_entry,
-    },
+    super::{db_err, serialize_entry, BoardEntry, BoardEntryStatus, BoardError},
     load_all_entries, lookup_active_entry_id,
 };
 
@@ -69,9 +67,7 @@ impl RedbIndexStore {
             }
 
             conn.execute(
-                &format!(
-                    "INSERT OR REPLACE INTO {TABLE_BOARD_ENTRIES} (id, data) VALUES (?1, ?2)"
-                ),
+                &format!("INSERT OR REPLACE INTO {TABLE_BOARD_ENTRIES} (id, data) VALUES (?1, ?2)"),
                 params![caller.entry_id.to_string(), serialize_entry(&caller)?],
             )
             .map_err(db_err)?;
@@ -126,9 +122,7 @@ impl RedbIndexStore {
             }
 
             conn.execute(
-                &format!(
-                    "INSERT OR REPLACE INTO {TABLE_BOARD_ENTRIES} (id, data) VALUES (?1, ?2)"
-                ),
+                &format!("INSERT OR REPLACE INTO {TABLE_BOARD_ENTRIES} (id, data) VALUES (?1, ?2)"),
                 params![caller.entry_id.to_string(), serialize_entry(&caller)?],
             )
             .map_err(db_err)?;
@@ -138,10 +132,7 @@ impl RedbIndexStore {
         })
     }
 
-    pub fn board_complete_all_for_ticket(
-        &self,
-        ticket_id: Uuid,
-    ) -> Result<Vec<Uuid>, BoardError> {
+    pub fn board_complete_all_for_ticket(&self, ticket_id: Uuid) -> Result<Vec<Uuid>, BoardError> {
         self.with_db_ext(|conn| {
             conn.execute_batch("BEGIN IMMEDIATE;").map_err(db_err)?;
 
@@ -156,11 +147,11 @@ impl RedbIndexStore {
                 return Ok(Vec::new());
             }
 
-                let completed_at = Utc::now();
+            let completed_at = Utc::now();
             let mut completed_ids = Vec::new();
             for mut entry in active {
                 entry.status = BoardEntryStatus::Completed;
-                    entry.completed_at = Some(completed_at);
+                entry.completed_at = Some(completed_at);
                 conn.execute(
                     &format!(
                         "INSERT OR REPLACE INTO {TABLE_BOARD_ENTRIES} (id, data) VALUES (?1, ?2)"
@@ -187,9 +178,7 @@ impl RedbIndexStore {
     ) -> Result<Option<(BoardEntry, String)>, BoardError> {
         self.with_db_ext(|conn| {
             for entry in load_all_entries(conn)? {
-                if entry.ticket_id == ticket_id
-                    && entry.status == BoardEntryStatus::Active
-                {
+                if entry.ticket_id == ticket_id && entry.status == BoardEntryStatus::Active {
                     let index_key = format!("{ticket_id}:{}", entry.agent_id);
                     return Ok(Some((entry, index_key)));
                 }

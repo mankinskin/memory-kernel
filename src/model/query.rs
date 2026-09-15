@@ -208,15 +208,10 @@ fn parse_special_field_value(
         return Ok(Some((CompareOp::Exists, ValueExpr::Empty)));
     }
 
-    if raw_value.starts_with('[')
-        && raw_value.ends_with(']')
-        && raw_value.contains(" TO ")
-    {
+    if raw_value.starts_with('[') && raw_value.ends_with(']') && raw_value.contains(" TO ") {
         let inner = &raw_value[1..raw_value.len() - 1];
         let (start, end) = inner.split_once(" TO ").ok_or_else(|| {
-            QueryParseError::InvalidExpression(format!(
-                "invalid range expression: {raw_token}"
-            ))
+            QueryParseError::InvalidExpression(format!("invalid range expression: {raw_token}"))
         })?;
         return Ok(Some((
             CompareOp::Range,
@@ -241,20 +236,14 @@ fn parse_compare_prefix(raw_value: &str) -> (CompareOp, &str) {
         (CompareOp::Lt, rest)
     } else if let Some(rest) = raw_value.strip_prefix('~') {
         (CompareOp::Contains, rest)
-    } else if raw_value.len() >= 2
-        && raw_value.starts_with('*')
-        && raw_value.ends_with('*')
-    {
+    } else if raw_value.len() >= 2 && raw_value.starts_with('*') && raw_value.ends_with('*') {
         (CompareOp::Contains, &raw_value[1..raw_value.len() - 1])
     } else {
         (CompareOp::Eq, raw_value)
     }
 }
 
-fn validate_field_key(
-    key: &str,
-    known_fields: &BTreeSet<String>,
-) -> Result<(), QueryParseError> {
+fn validate_field_key(key: &str, known_fields: &BTreeSet<String>) -> Result<(), QueryParseError> {
     if known_fields.contains(key) {
         return Ok(());
     }
@@ -282,9 +271,7 @@ pub fn is_valid_dynamic_field_key(key: &str) -> bool {
     let p0 = parts.next();
     let p1 = parts.next();
     let p2 = parts.next();
-    p0 == Some("x")
-        && p1.is_some_and(|p| !p.is_empty())
-        && p2.is_some_and(|p| !p.is_empty())
+    p0 == Some("x") && p1.is_some_and(|p| !p.is_empty()) && p2.is_some_and(|p| !p.is_empty())
 }
 
 fn trim_quotes(s: &str) -> String {
@@ -306,23 +293,23 @@ fn tokenize(input: &str) -> Vec<String> {
             '"' => {
                 in_quotes = !in_quotes;
                 current.push(ch);
-            },
+            }
             // Suppress splitting inside a `[a TO b]` range so the embedded
             // space does not break the token apart.
             '[' if !in_quotes => {
                 bracket_depth += 1;
                 current.push(ch);
-            },
+            }
             ']' if !in_quotes && bracket_depth > 0 => {
                 bracket_depth -= 1;
                 current.push(ch);
-            },
+            }
             c if c.is_whitespace() && !in_quotes && bracket_depth == 0 => {
                 if !current.is_empty() {
                     tokens.push(current.clone());
                     current.clear();
                 }
-            },
+            }
             _ => current.push(ch),
         }
     }

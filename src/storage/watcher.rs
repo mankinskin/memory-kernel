@@ -49,8 +49,7 @@ impl EntityStore {
         let (tx, rx) = mpsc::channel();
         let mut watcher: RecommendedWatcher = Watcher::new(
             tx,
-            notify::Config::default()
-                .with_poll_interval(Duration::from_secs(2)),
+            notify::Config::default().with_poll_interval(Duration::from_secs(2)),
         )
         .map_err(|e| {
             StorageError::Io(std::io::Error::new(
@@ -82,10 +81,7 @@ impl EntityStore {
     ///
     /// Returns `Ok(true)` when an entity was integrated or removed, `Ok(false)`
     /// when `path` does not belong to a recognizable entity folder.
-    pub fn reconcile_path(
-        &self,
-        path: &Path,
-    ) -> Result<bool, StorageError> {
+    pub fn reconcile_path(&self, path: &Path) -> Result<bool, StorageError> {
         let Some(entity_root) = find_entity_root(path) else {
             return Ok(false);
         };
@@ -111,11 +107,7 @@ impl EntityStore {
 /// Blocks the calling thread indefinitely. Events are debounced into batches:
 /// after `debounce_ms` of quiet following the last event, each affected entity
 /// folder is reconciled via [`EntityStore::reconcile_path`].
-pub fn run_watch_loop(
-    handle: &WatchHandle,
-    store: &EntityStore,
-    debounce_ms: u64,
-) {
+pub fn run_watch_loop(handle: &WatchHandle, store: &EntityStore, debounce_ms: u64) {
     let debounce = Duration::from_millis(debounce_ms);
     let mut pending_paths: Vec<PathBuf> = Vec::new();
     let mut last_event: Option<Instant> = None;
@@ -125,8 +117,8 @@ pub fn run_watch_loop(
             Some(Ok(event)) => {
                 pending_paths.extend(event.paths);
                 last_event = Some(Instant::now());
-            },
-            Some(Err(_)) | None => {},
+            }
+            Some(Err(_)) | None => {}
         }
 
         if let Some(ts) = last_event {
@@ -182,8 +174,7 @@ mod tests {
 
     fn open_store(dir: &Path) -> EntityStore {
         let fs = EntityFs::with_config(
-            EntityFolderConfig::new("entity.toml", ".lock")
-                .with_body_file("body.md"),
+            EntityFolderConfig::new("entity.toml", ".lock").with_body_file("body.md"),
         );
         let store = EntityStore::open(dir, fs).unwrap();
         store
@@ -195,17 +186,11 @@ mod tests {
         store
     }
 
-    fn write_entity(
-        root: &Path,
-        id: Uuid,
-        title: &str,
-        body: &str,
-    ) -> PathBuf {
+    fn write_entity(root: &Path, id: Uuid, title: &str, body: &str) -> PathBuf {
         let folder = root.join("entities").join(id.to_string());
         fs::create_dir_all(&folder).unwrap();
-        let manifest = format!(
-            "id = \"{id}\"\ntitle = \"{title}\"\ncreated_at = \"2024-01-01T00:00:00Z\"\n"
-        );
+        let manifest =
+            format!("id = \"{id}\"\ntitle = \"{title}\"\ncreated_at = \"2024-01-01T00:00:00Z\"\n");
         fs::write(folder.join("entity.toml"), manifest).unwrap();
         fs::write(folder.join("body.md"), body).unwrap();
         folder

@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     model::filesystem::ScanRoot,
-    workspace_policy::{WorkspacePolicy, load_workspace_policy},
+    workspace_policy::{load_workspace_policy, WorkspacePolicy},
 };
 
 pub const TICKET_INDEX_DIR: &str = ".ticket";
@@ -47,10 +47,7 @@ impl InvalidWorkspaceSelector {
 }
 
 impl std::fmt::Display for InvalidWorkspaceSelector {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "invalid workspace selector '{}': entity creation requires an explicit workspace path; do not use omitted, empty, 'default', or '..'; use '.' explicitly to target the MCP server process's current working directory",
@@ -62,7 +59,7 @@ impl std::fmt::Display for InvalidWorkspaceSelector {
 impl std::error::Error for InvalidWorkspaceSelector {}
 
 pub fn validate_explicit_workspace_selector(
-    workspace: Option<&str>
+    workspace: Option<&str>,
 ) -> Result<&str, InvalidWorkspaceSelector> {
     let Some(workspace) = workspace else {
         return Err(InvalidWorkspaceSelector {
@@ -103,10 +100,7 @@ pub enum ConsumerWorkspaceError {
 }
 
 impl std::fmt::Display for ConsumerWorkspaceError {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::AmbiguousSuperproject { workspace, stores } => write!(
                 f,
@@ -125,10 +119,7 @@ impl std::fmt::Display for ConsumerWorkspaceError {
 impl std::error::Error for ConsumerWorkspaceError {}
 
 impl std::fmt::Display for WorkspacePathError {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::CanonicalizeFailed { input, source } => write!(
                 f,
@@ -136,10 +127,10 @@ impl std::fmt::Display for WorkspacePathError {
             ),
             Self::InvalidWindowsPrefix { input, detail } => {
                 write!(f, "invalid Windows path prefix for '{input}': {detail}")
-            },
+            }
             Self::UnrepresentablePath { input, detail } => {
                 write!(f, "unrepresentable path '{input}': {detail}")
-            },
+            }
         }
     }
 }
@@ -162,15 +153,12 @@ pub fn working_dir() -> Option<PathBuf> {
 
 pub fn normalize_path_for_display(path: &Path) -> String {
     normalize_path_for_display_impl(path).unwrap_or_else(|_| {
-        let fallback =
-            normalize_path_for_workspace_string(&path.to_string_lossy());
+        let fallback = normalize_path_for_workspace_string(&path.to_string_lossy());
         normalize_drive_letter_for_display(&fallback)
     })
 }
 
-pub fn normalize_path_for_display_strict(
-    path: &Path
-) -> Result<String, WorkspacePathError> {
+pub fn normalize_path_for_display_strict(path: &Path) -> Result<String, WorkspacePathError> {
     normalize_path_for_display_impl(path)
 }
 
@@ -186,21 +174,17 @@ pub fn canonicalize_workspace_root(path: &Path) -> PathBuf {
     canonicalize_workspace_root_lossy(path)
 }
 
-pub fn canonicalize_workspace_root_strict(
-    path: &Path
-) -> Result<PathBuf, WorkspacePathError> {
-    let canonical = std::fs::canonicalize(path).map_err(|source| {
-        WorkspacePathError::CanonicalizeFailed {
+pub fn canonicalize_workspace_root_strict(path: &Path) -> Result<PathBuf, WorkspacePathError> {
+    let canonical =
+        std::fs::canonicalize(path).map_err(|source| WorkspacePathError::CanonicalizeFailed {
             input: path.to_string_lossy().to_string(),
             source,
-        }
-    })?;
+        })?;
     Ok(strip_verbatim_prefix(&canonical))
 }
 
 pub fn canonicalize_workspace_root_lossy(path: &Path) -> PathBuf {
-    canonicalize_workspace_root_strict(path)
-        .unwrap_or_else(|_| strip_verbatim_prefix(path))
+    canonicalize_workspace_root_strict(path).unwrap_or_else(|_| strip_verbatim_prefix(path))
 }
 
 /// Remove the Windows `\\?\` (and slash-normalized `//?/`) verbatim prefix from
@@ -219,9 +203,7 @@ pub fn normalize_slashes(path: &Path) -> String {
     raw.strip_prefix(r"\\?\").unwrap_or(raw).to_string()
 }
 
-fn normalize_path_for_display_impl(
-    path: &Path
-) -> Result<String, WorkspacePathError> {
+fn normalize_path_for_display_impl(path: &Path) -> Result<String, WorkspacePathError> {
     let raw = path.to_str().map(str::to_string).ok_or_else(|| {
         WorkspacePathError::UnrepresentablePath {
             input: path.to_string_lossy().to_string(),
@@ -249,14 +231,11 @@ fn normalize_drive_letter_for_display(value: &str) -> String {
 }
 
 fn normalize_path_for_workspace_string(raw: &str) -> String {
-    normalize_path_for_workspace_string_impl(raw, false).unwrap_or_else(|_| {
-        collapse_slashes_preserving_root(&raw.replace('\\', "/"))
-    })
+    normalize_path_for_workspace_string_impl(raw, false)
+        .unwrap_or_else(|_| collapse_slashes_preserving_root(&raw.replace('\\', "/")))
 }
 
-fn normalize_path_for_workspace_string_strict(
-    raw: &str
-) -> Result<String, WorkspacePathError> {
+fn normalize_path_for_workspace_string_strict(raw: &str) -> Result<String, WorkspacePathError> {
     normalize_path_for_workspace_string_impl(raw, true)
 }
 
@@ -284,8 +263,7 @@ fn normalize_path_for_workspace_string_impl(
         .strip_prefix(r"\\?\")
         .or_else(|| raw.strip_prefix("//?/"))
         .unwrap_or(raw);
-    let normalized =
-        collapse_slashes_preserving_root(&without_verbatim.replace('\\', "/"));
+    let normalized = collapse_slashes_preserving_root(&without_verbatim.replace('\\', "/"));
 
     if strict && normalized.starts_with("//") {
         let remainder = normalized.trim_start_matches('/');
@@ -295,18 +273,14 @@ fn normalize_path_for_workspace_string_impl(
     Ok(normalized)
 }
 
-fn validate_unc_remainder(
-    remainder: &str,
-    input: &str,
-) -> Result<(), WorkspacePathError> {
+fn validate_unc_remainder(remainder: &str, input: &str) -> Result<(), WorkspacePathError> {
     let mut parts = remainder.split('/').filter(|part| !part.is_empty());
     let server = parts.next();
     let share = parts.next();
     if server.is_none() || share.is_none() {
         return Err(WorkspacePathError::InvalidWindowsPrefix {
             input: input.to_string(),
-            detail: "UNC path must include both server and share segments"
-                .to_string(),
+            detail: "UNC path must include both server and share segments".to_string(),
         });
     }
     Ok(())
@@ -358,10 +332,7 @@ pub fn find_local_root(dir_name: &str) -> Option<PathBuf> {
     find_local_root_from(&cwd, dir_name)
 }
 
-pub fn find_local_root_from(
-    start: &Path,
-    dir_name: &str,
-) -> Option<PathBuf> {
+pub fn find_local_root_from(start: &Path, dir_name: &str) -> Option<PathBuf> {
     let mut dir = start_dir(start);
     loop {
         if let Some(store_root) = find_store_at_workspace(dir, dir_name) {
@@ -380,18 +351,11 @@ pub fn resolve_local_root(dir_name: &str) -> PathBuf {
         .unwrap_or_else(|| PathBuf::from(dir_name))
 }
 
-pub fn resolve_local_root_from(
-    start: &Path,
-    dir_name: &str,
-) -> PathBuf {
-    find_local_root_from(start, dir_name)
-        .unwrap_or_else(|| start_dir(start).join(dir_name))
+pub fn resolve_local_root_from(start: &Path, dir_name: &str) -> PathBuf {
+    find_local_root_from(start, dir_name).unwrap_or_else(|| start_dir(start).join(dir_name))
 }
 
-pub fn resolve_store_root_from(
-    start: &Path,
-    dir_name: &str,
-) -> PathBuf {
+pub fn resolve_store_root_from(start: &Path, dir_name: &str) -> PathBuf {
     resolve_store_root_from_with_diagnostics(start, dir_name).store_root
 }
 
@@ -601,10 +565,7 @@ pub fn resolve_consumer_store_root_from(
 
     let stores = find_descendant_store_roots_from(&workspace, dir_name);
     if stores.len() > 1 {
-        return Err(ConsumerWorkspaceError::AmbiguousSuperproject {
-            workspace,
-            stores,
-        });
+        return Err(ConsumerWorkspaceError::AmbiguousSuperproject { workspace, stores });
     }
 
     Ok(resolve_requested_store_root_from(
@@ -629,10 +590,7 @@ pub fn resolve_consumer_store_root_from(
 /// 1. An existing store discovered by walking upward from `cwd`.
 /// 2. An existing store nested under `cwd` (shallowest first).
 /// 3. A hidden store at the execution root (`cwd/<dir_name>`).
-pub fn resolve_session_store_root_from(
-    cwd: Option<&Path>,
-    dir_name: &str,
-) -> PathBuf {
+pub fn resolve_session_store_root_from(cwd: Option<&Path>, dir_name: &str) -> PathBuf {
     resolve_session_store_root_from_with_diagnostics(cwd, dir_name).store_root
 }
 
@@ -666,13 +624,13 @@ pub fn resolve_session_store_root_from_with_diagnostics(
     }
 }
 
-pub fn resolve_workspace_root_from_store_root(
-    store_root: &Path,
-    dir_name: &str,
-) -> PathBuf {
+pub fn resolve_workspace_root_from_store_root(store_root: &Path, dir_name: &str) -> PathBuf {
     let normalized = normalize_working_dir_path(store_root);
     if is_store_root(&normalized, dir_name) {
-        if normalized.parent().and_then(Path::file_name).and_then(|name| name.to_str())
+        if normalized
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str())
             == Some(CANONICAL_STORES_DIR)
         {
             return normalized
@@ -690,10 +648,7 @@ pub fn resolve_workspace_root_from_store_root(
     normalized
 }
 
-pub fn find_descendant_store_roots_from(
-    start: &Path,
-    dir_name: &str,
-) -> Vec<PathBuf> {
+pub fn find_descendant_store_roots_from(start: &Path, dir_name: &str) -> Vec<PathBuf> {
     let mut roots = Vec::new();
     collect_descendant_store_roots(
         &normalize_working_dir_path(start_dir(start)),
@@ -712,12 +667,7 @@ pub fn discover_workspace_scan_roots(
 ) -> Vec<ScanRoot> {
     let normalized_root = normalize_working_dir_path(start_dir(workspace_root));
     let policy = load_workspace_policy(&normalized_root);
-    discover_workspace_scan_roots_with_policy(
-        workspace_root,
-        store_dir,
-        entity_dir,
-        &policy,
-    )
+    discover_workspace_scan_roots_with_policy(workspace_root, store_dir, entity_dir, &policy)
 }
 
 /// Discover canonical hidden store roots for a workspace using active
@@ -727,11 +677,10 @@ pub fn discover_workspace_store_roots(
     store_dir: &str,
     entity_dir: &str,
 ) -> Vec<PathBuf> {
-    let mut roots =
-        discover_workspace_scan_roots(workspace_root, store_dir, entity_dir)
-            .into_iter()
-            .map(|root| resolve_store_root_from(&root.path, store_dir))
-            .collect::<Vec<_>>();
+    let mut roots = discover_workspace_scan_roots(workspace_root, store_dir, entity_dir)
+        .into_iter()
+        .map(|root| resolve_store_root_from(&root.path, store_dir))
+        .collect::<Vec<_>>();
     roots.sort();
     roots.dedup();
     roots
@@ -747,15 +696,12 @@ pub fn workspace_recovery_hint_for_store(
     entity_dir: &str,
     store_label: &str,
 ) -> String {
-    let active_store_root =
-        resolve_store_root_from(active_index_root, store_dir);
-    let workspace_root =
-        resolve_workspace_root_from_store_root(&active_store_root, store_dir);
-    let discovered =
-        discover_workspace_store_roots(&workspace_root, store_dir, entity_dir)
-            .into_iter()
-            .map(|path| normalize_path_for_display(&path))
-            .collect::<Vec<_>>();
+    let active_store_root = resolve_store_root_from(active_index_root, store_dir);
+    let workspace_root = resolve_workspace_root_from_store_root(&active_store_root, store_dir);
+    let discovered = discover_workspace_store_roots(&workspace_root, store_dir, entity_dir)
+        .into_iter()
+        .map(|path| normalize_path_for_display(&path))
+        .collect::<Vec<_>>();
 
     if discovered.is_empty() {
         return format!(
@@ -795,11 +741,8 @@ pub fn discover_workspace_scan_roots_with_policy(
     }
 
     if policy.include_descendants {
-        for store_root in
-            find_descendant_store_roots_from(&workspace_root, store_dir)
-        {
-            let owning_workspace =
-                resolve_workspace_root_from_store_root(&store_root, store_dir);
+        for store_root in find_descendant_store_roots_from(&workspace_root, store_dir) {
+            let owning_workspace = resolve_workspace_root_from_store_root(&store_root, store_dir);
             if owning_workspace == workspace_root {
                 continue;
             }
@@ -817,8 +760,7 @@ pub fn discover_workspace_scan_roots_with_policy(
             if !candidate.is_dir() {
                 continue;
             }
-            let owning_workspace =
-                resolve_workspace_root_from_store_root(&candidate, store_dir);
+            let owning_workspace = resolve_workspace_root_from_store_root(&candidate, store_dir);
             if policy_allows(policy, &workspace_root, &owning_workspace) {
                 store_roots.push(normalize_working_dir_path(&candidate));
             }
@@ -831,8 +773,7 @@ pub fn discover_workspace_scan_roots_with_policy(
     store_roots
         .into_iter()
         .map(|store_root| {
-            let owning_workspace =
-                resolve_workspace_root_from_store_root(&store_root, store_dir);
+            let owning_workspace = resolve_workspace_root_from_store_root(&store_root, store_dir);
             let label = if owning_workspace == workspace_root {
                 ".".to_string()
             } else {
@@ -864,11 +805,7 @@ pub fn discover_workspace_scan_roots_with_policy(
 /// candidate cannot be expressed relative to the workspace root (e.g. an
 /// ancestor store), its normalized absolute path string is used for glob
 /// matching instead.
-fn policy_allows(
-    policy: &WorkspacePolicy,
-    workspace_root: &Path,
-    owning_workspace: &Path,
-) -> bool {
+fn policy_allows(policy: &WorkspacePolicy, workspace_root: &Path, owning_workspace: &Path) -> bool {
     let match_path = owning_workspace
         .strip_prefix(workspace_root)
         .ok()
@@ -890,10 +827,10 @@ impl WorkspaceSource {
         match self {
             Self::Discovered(path) => {
                 format!("discovered local .ticket ({})", path.display())
-            },
+            }
             Self::Default(path) => {
                 format!("default local .ticket ({})", path.display())
-            },
+            }
         }
     }
 }
@@ -924,10 +861,7 @@ fn start_dir(start: &Path) -> &Path {
     }
 }
 
-fn resolve_working_dir(
-    cwd: Option<&Path>,
-    pwd: Option<&Path>,
-) -> Option<PathBuf> {
+fn resolve_working_dir(cwd: Option<&Path>, pwd: Option<&Path>) -> Option<PathBuf> {
     cwd.or(pwd).map(normalize_working_dir_path)
 }
 
@@ -947,11 +881,7 @@ fn normalize_working_dir_path(path: &Path) -> PathBuf {
     }
 }
 
-fn collect_descendant_store_roots(
-    dir: &Path,
-    dir_name: &str,
-    roots: &mut Vec<PathBuf>,
-) {
+fn collect_descendant_store_roots(dir: &Path, dir_name: &str, roots: &mut Vec<PathBuf>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
@@ -965,8 +895,7 @@ fn collect_descendant_store_roots(
             continue;
         }
 
-        let Some(name) = path.file_name().and_then(|value| value.to_str())
-        else {
+        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
             continue;
         };
 
@@ -1002,7 +931,9 @@ fn store_domain(dir_name: &str) -> &str {
 /// instead of the legacy bare `<dir_name>` path that
 /// [`resolve_store_root_at_fixed_workspace`] still returns as its default.
 pub fn canonical_store_root(workspace: &Path, dir_name: &str) -> PathBuf {
-    workspace.join(CANONICAL_STORES_DIR).join(store_domain(dir_name))
+    workspace
+        .join(CANONICAL_STORES_DIR)
+        .join(store_domain(dir_name))
 }
 
 fn find_store_at_workspace(workspace: &Path, dir_name: &str) -> Option<PathBuf> {
@@ -1024,10 +955,7 @@ fn find_store_at_workspace(workspace: &Path, dir_name: &str) -> Option<PathBuf> 
 /// then an existing legacy bare `<dir_name>` store, then the legacy bare path
 /// (unchanged default location for a not-yet-created store, preserving every
 /// existing caller's current default-creation behavior).
-pub fn resolve_store_root_at_fixed_workspace(
-    workspace: &Path,
-    dir_name: &str,
-) -> PathBuf {
+pub fn resolve_store_root_at_fixed_workspace(workspace: &Path, dir_name: &str) -> PathBuf {
     let normalized = normalize_working_dir_path(workspace);
     if is_store_root(&normalized, dir_name) {
         return normalized;
@@ -1035,10 +963,7 @@ pub fn resolve_store_root_at_fixed_workspace(
     find_store_at_workspace(&normalized, dir_name).unwrap_or_else(|| normalized.join(dir_name))
 }
 
-fn resolve_store_root_at_workspace(
-    workspace: &Path,
-    dir_name: &str,
-) -> StoreRootResolution {
+fn resolve_store_root_at_workspace(workspace: &Path, dir_name: &str) -> StoreRootResolution {
     let canonical_path = canonical_store_root(workspace, dir_name);
     let legacy_path = workspace.join(dir_name);
     let canonical_exists = canonical_path.is_dir();
@@ -1070,10 +995,7 @@ fn resolve_store_root_at_workspace(
     }
 }
 
-fn resolve_store_root_at_workspace_read(
-    workspace: &Path,
-    dir_name: &str,
-) -> StoreRootResolution {
+fn resolve_store_root_at_workspace_read(workspace: &Path, dir_name: &str) -> StoreRootResolution {
     let resolution = resolve_store_root_at_workspace(workspace, dir_name);
     if resolution.store_root == canonical_store_root(workspace, dir_name)
         && resolution.diagnostics.is_empty()
@@ -1092,21 +1014,17 @@ fn is_store_root(path: &Path, dir_name: &str) -> bool {
         return true;
     }
     path.file_name().and_then(|name| name.to_str()) == Some(store_domain(dir_name))
-        && path.parent().and_then(Path::file_name).and_then(|name| name.to_str())
+        && path
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str())
             == Some(CANONICAL_STORES_DIR)
 }
 
 fn should_skip_descendant_dir(name: &str) -> bool {
     matches!(
         name,
-        ".git"
-            | ".hg"
-            | ".svn"
-            | ".worktrees"
-            | "target"
-            | "node_modules"
-            | "release"
-            | "tmp"
+        ".git" | ".hg" | ".svn" | ".worktrees" | "target" | "node_modules" | "release" | "tmp"
     )
 }
 

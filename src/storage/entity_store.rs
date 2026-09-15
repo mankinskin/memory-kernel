@@ -46,10 +46,7 @@ impl EntityStore {
     ///
     /// `index_root` is the directory for SQLite + Tantivy index files.
     /// `fs` provides the filesystem layout configuration for entity folders.
-    pub fn open(
-        index_root: &Path,
-        fs: EntityFs,
-    ) -> Result<Self, StorageError> {
+    pub fn open(index_root: &Path, fs: EntityFs) -> Result<Self, StorageError> {
         Self::open_with(index_root, fs, SchemaRegistry::new())
     }
 
@@ -59,11 +56,7 @@ impl EntityStore {
         fs: EntityFs,
         schema_registry: SchemaRegistry,
     ) -> Result<Self, StorageError> {
-        ensure_sqlite_index_root(
-            index_root,
-            "entities.db",
-            &["search_index/"],
-        )?;
+        ensure_sqlite_index_root(index_root, "entities.db", &["search_index/"])?;
         let db_path = index_root.join("entities.db");
         let search_dir = index_root.join("search_index");
 
@@ -85,10 +78,7 @@ impl EntityStore {
 
     // ── Scan-root management ────────────────────────────────────────
 
-    pub fn add_scan_root(
-        &self,
-        root: ScanRoot,
-    ) -> Result<(), StorageError> {
+    pub fn add_scan_root(&self, root: ScanRoot) -> Result<(), StorageError> {
         self.index.add_scan_root(&root)
     }
 
@@ -98,10 +88,7 @@ impl EntityStore {
 
     // ── Index queries ───────────────────────────────────────────────
 
-    pub fn get_indexed(
-        &self,
-        id: &Uuid,
-    ) -> Result<Option<IndexedEntity>, StorageError> {
+    pub fn get_indexed(&self, id: &Uuid) -> Result<Option<IndexedEntity>, StorageError> {
         self.index.get_ticket(id)
     }
 
@@ -130,13 +117,11 @@ impl EntityStore {
             // class of damage that cannot be detected without reading every
             // segment, so it is the sole case repaired reactively: rebuild from
             // the filesystem source of truth and retry the read once.
-            Err(error)
-                if TantivySearchIndex::is_rebuildable_read_failure(&error) =>
-            {
+            Err(error) if TantivySearchIndex::is_rebuildable_read_failure(&error) => {
                 self.search.reset_dir()?;
                 self.scan_once(true)?;
                 self.search.search(&expr, limit)
-            },
+            }
             Err(error) => Err(error),
         }
     }
@@ -175,10 +160,7 @@ impl EntityStore {
 
     // ── Edge management ─────────────────────────────────────────────
 
-    pub fn add_edge(
-        &self,
-        edge: EdgeRecord,
-    ) -> Result<(), StorageError> {
+    pub fn add_edge(&self, edge: EdgeRecord) -> Result<(), StorageError> {
         // Enforce acyclicity when the schema says so.
         let is_acyclic = self
             .schema_registry
@@ -194,17 +176,11 @@ impl EntityStore {
         self.index.insert_edge(&edge)
     }
 
-    pub fn remove_edge(
-        &self,
-        edge: EdgeRecord,
-    ) -> Result<(), StorageError> {
+    pub fn remove_edge(&self, edge: EdgeRecord) -> Result<(), StorageError> {
         self.index.delete_edge(&edge)
     }
 
-    pub fn edges_from(
-        &self,
-        id: &Uuid,
-    ) -> Result<Vec<EdgeRecord>, StorageError> {
+    pub fn edges_from(&self, id: &Uuid) -> Result<Vec<EdgeRecord>, StorageError> {
         self.index.edges_from(id)
     }
 
@@ -227,10 +203,7 @@ impl EntityStore {
     /// panic the writer, or truncated/missing segment files that cannot be
     /// opened. The index is then repopulated from the filesystem source of
     /// truth, so the completeness invariant is restored.
-    pub fn scan(
-        &self,
-        reindex: bool,
-    ) -> Result<ScanReport, StorageError> {
+    pub fn scan(&self, reindex: bool) -> Result<ScanReport, StorageError> {
         // Proactively enforce all search-index invariants before writing. The
         // rebuild check heals structural corruption (via `num_docs`) and detects
         // an empty/partial/unreadable index; either condition forces a full
@@ -239,10 +212,7 @@ impl EntityStore {
         self.scan_once(force)
     }
 
-    fn scan_once(
-        &self,
-        reindex: bool,
-    ) -> Result<ScanReport, StorageError> {
+    fn scan_once(&self, reindex: bool) -> Result<ScanReport, StorageError> {
         if reindex {
             // Reset the directory instead of clearing documents: a forced
             // rebuild must not depend on opening the (possibly corrupt) existing
@@ -279,8 +249,7 @@ impl EntityStore {
             if !root.path.exists() {
                 continue;
             }
-            let (candidates, diags) =
-                self.fs.scan_root_candidates(&root.path)?;
+            let (candidates, diags) = self.fs.scan_root_candidates(&root.path)?;
             diagnostics.extend(diags);
 
             for candidate in candidates {
@@ -309,8 +278,8 @@ impl EntityStore {
                         if let Some(mtime) = candidate.manifest_mtime {
                             current_fingerprints.insert(candidate.id, mtime);
                         }
-                    },
-                    Ok(None) => {},
+                    }
+                    Ok(None) => {}
                     Err(diag) => diagnostics.push(diag),
                 }
             }
@@ -344,8 +313,7 @@ impl EntityStore {
     /// A missing or unreadable/corrupt sidecar yields an empty map, which is
     /// safe: every entity is then treated as changed and re-integrated.
     fn load_scan_fingerprints(&self) -> std::collections::HashMap<Uuid, u128> {
-        let Ok(content) = std::fs::read_to_string(self.scan_fingerprint_path())
-        else {
+        let Ok(content) = std::fs::read_to_string(self.scan_fingerprint_path()) else {
             return std::collections::HashMap::new();
         };
         serde_json::from_str(&content).unwrap_or_default()
@@ -354,10 +322,7 @@ impl EntityStore {
     /// Persist the per-entity manifest fingerprints observed in this scan.
     /// Best-effort: a write failure only forfeits the next scan's skip
     /// optimization, so it must never fail the scan itself.
-    fn save_scan_fingerprints(
-        &self,
-        fingerprints: &std::collections::HashMap<Uuid, u128>,
-    ) {
+    fn save_scan_fingerprints(&self, fingerprints: &std::collections::HashMap<Uuid, u128>) {
         let Ok(serialized) = serde_json::to_string(fingerprints) else {
             return;
         };
@@ -379,10 +344,7 @@ impl EntityStore {
     /// Returns `Ok(true)` when the entity was integrated, or `Ok(false)` when
     /// `path` is not a valid entity folder (non-UUID name or unreadable
     /// manifest).
-    pub fn integrate_orphan(
-        &self,
-        path: &Path,
-    ) -> Result<bool, StorageError> {
+    pub fn integrate_orphan(&self, path: &Path) -> Result<bool, StorageError> {
         let id: Uuid = match path
             .file_name()
             .and_then(|name| name.to_str())
@@ -418,10 +380,7 @@ impl EntityStore {
     /// Remove a single entity from the metadata index and the search index.
     ///
     /// Used by the watcher when an entity folder is deleted from disk.
-    pub fn remove_entity(
-        &self,
-        id: &Uuid,
-    ) -> Result<(), StorageError> {
+    pub fn remove_entity(&self, id: &Uuid) -> Result<(), StorageError> {
         self.index.remove_ticket(id)?;
         self.search.remove(id)?;
         Ok(())
@@ -461,7 +420,7 @@ impl EntityStore {
                 existing.title = title.clone();
                 existing.state = state.clone();
                 existing
-            },
+            }
             None => IndexedEntity {
                 id: entry.id,
                 path: entry.path.clone(),
@@ -477,12 +436,11 @@ impl EntityStore {
         if update_search {
             let body = self.fs.read_description(&entry.path);
             let created_at_str = indexed.created_at.to_rfc3339();
-            let effort_str =
-                entry.manifest.extra.get("effort").and_then(|v| match v {
-                    serde_json::Value::String(s) => Some(s.clone()),
-                    serde_json::Value::Number(n) => Some(n.to_string()),
-                    _ => None,
-                });
+            let effort_str = entry.manifest.extra.get("effort").and_then(|v| match v {
+                serde_json::Value::String(s) => Some(s.clone()),
+                serde_json::Value::Number(n) => Some(n.to_string()),
+                _ => None,
+            });
             self.search.upsert(
                 &entry.id,
                 title.as_deref(),
@@ -538,7 +496,7 @@ mod tests {
     fn scan_reindex_self_heals_stale_search_index_schema() {
         use crate::model::entity::EntityManifest;
         use serde_json::json;
-        use tantivy::schema::{FAST, STORED, STRING, Schema, TEXT};
+        use tantivy::schema::{Schema, FAST, STORED, STRING, TEXT};
 
         let tmp = tempfile::tempdir().unwrap();
         let store = EntityStore::open(tmp.path(), test_fs()).unwrap();
@@ -624,8 +582,7 @@ mod tests {
         };
 
         // 1. Corrupt meta.json (unopenable index).
-        std::fs::write(search_dir.join("meta.json"), b"not valid json")
-            .unwrap();
+        std::fs::write(search_dir.join("meta.json"), b"not valid json").unwrap();
         assert_eq!(store.search("needle", 10).unwrap().len(), 3);
 
         // 2. Wipe the whole index directory.
@@ -846,17 +803,13 @@ mod tests {
         );
 
         // Touching one manifest re-integrates exactly that entity.
-        let changed_manifest =
-            entity_dir.join(ids[0].to_string()).join("entity.toml");
+        let changed_manifest = entity_dir.join(ids[0].to_string()).join("entity.toml");
         // Guarantee a distinct mtime even on coarse-resolution filesystems.
         std::thread::sleep(std::time::Duration::from_millis(20));
         let body = std::fs::read_to_string(&changed_manifest).unwrap();
         std::fs::write(&changed_manifest, format!("{body}\n")).unwrap();
 
         let third = store.scan(false).unwrap();
-        assert_eq!(
-            third.integrated, 1,
-            "only the changed entity re-integrates"
-        );
+        assert_eq!(third.integrated, 1, "only the changed entity re-integrates");
     }
 }

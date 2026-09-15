@@ -29,13 +29,7 @@
 //! select(.tags | any(. == "testing"))
 //! ```
 
-use jaq_interpret::{
-    Ctx,
-    FilterT,
-    ParseCtx,
-    RcIter,
-    Val,
-};
+use jaq_interpret::{Ctx, FilterT, ParseCtx, RcIter, Val};
 use serde_json::Value;
 
 /// Error type for query operations
@@ -45,10 +39,7 @@ pub struct QueryError {
 }
 
 impl std::fmt::Display for QueryError {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.message)
     }
 }
@@ -95,10 +86,7 @@ impl JqFilter {
     }
 
     /// Run the filter on a JSON value, returning all outputs
-    pub fn run(
-        &self,
-        input: &Value,
-    ) -> Vec<Result<Value, String>> {
+    pub fn run(&self, input: &Value) -> Vec<Result<Value, String>> {
         let inputs = RcIter::new(std::iter::empty());
         let val = Val::from(input.clone());
         let ctx = Ctx::new([], &inputs);
@@ -114,10 +102,7 @@ impl JqFilter {
     }
 
     /// Run the filter on a value, returning true if any output is truthy
-    pub fn matches(
-        &self,
-        input: &Value,
-    ) -> bool {
+    pub fn matches(&self, input: &Value) -> bool {
         let results = self.run(input);
         results.into_iter().any(|r| match r {
             Ok(Value::Bool(true)) => true,
@@ -194,9 +179,7 @@ mod tests {
 
     #[test]
     fn test_filter_contains() {
-        let filter =
-            JqFilter::compile("select(.message | contains(\"panic\"))")
-                .unwrap();
+        let filter = JqFilter::compile("select(.message | contains(\"panic\"))").unwrap();
 
         let match_entry = json!({"message": "thread panic detected"});
         let no_match = json!({"message": "all good"});
@@ -207,9 +190,7 @@ mod tests {
 
     #[test]
     fn test_filter_case_insensitive() {
-        let filter =
-            JqFilter::compile("select(.message | test(\"error\"; \"i\"))")
-                .unwrap();
+        let filter = JqFilter::compile("select(.message | test(\"error\"; \"i\"))").unwrap();
 
         let upper = json!({"message": "Error occurred"});
         let lower = json!({"message": "error occurred"});
@@ -228,9 +209,7 @@ mod tests {
             json!({"level": "ERROR", "message": "crash"}),
         ];
 
-        let results =
-            filter_values(entries.iter(), "select(.level == \"ERROR\")")
-                .unwrap();
+        let results = filter_values(entries.iter(), "select(.level == \"ERROR\")").unwrap();
 
         assert_eq!(results.len(), 2);
         assert_eq!(results[0]["message"], "fail");
@@ -244,8 +223,7 @@ mod tests {
             json!({"level": "INFO", "message": "ok", "ts": 2}),
         ];
 
-        let results =
-            transform_values(entries.iter(), "{level, message}").unwrap();
+        let results = transform_values(entries.iter(), "{level, message}").unwrap();
 
         assert_eq!(results.len(), 2);
         assert_eq!(results[0], json!({"level": "ERROR", "message": "fail"}));
@@ -254,8 +232,7 @@ mod tests {
 
     #[test]
     fn test_filter_array_any() {
-        let filter =
-            JqFilter::compile("select(.tags | any(. == \"testing\"))").unwrap();
+        let filter = JqFilter::compile("select(.tags | any(. == \"testing\"))").unwrap();
 
         let match_entry = json!({"tags": ["testing", "debug"]});
         let no_match = json!({"tags": ["production"]});

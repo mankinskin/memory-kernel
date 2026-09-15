@@ -8,8 +8,7 @@ pub const ENTITY_ASSETS_DIR: &str = "assets";
 pub const ENTITY_BODY_FILE: &str = "description.md";
 pub const ENTITY_HISTORY_FILE: &str = "history.ndjson";
 pub const ENTITY_INTERVIEW_DIR: &str = "assets/interviews";
-pub const ENTITY_INTERVIEW_QUESTIONS_FILE: &str =
-    "assets/interviews/questions.md";
+pub const ENTITY_INTERVIEW_QUESTIONS_FILE: &str = "assets/interviews/questions.md";
 pub const ENTITY_INTERVIEW_ANSWERS_FILE: &str = "assets/interviews/answers.md";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -19,9 +18,7 @@ pub struct ScanRoot {
 }
 
 /// Provenance of a persisted scan root.
-#[derive(
-    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default,
-)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ScanRootSource {
     /// Added by automatic workspace discovery.
@@ -52,9 +49,7 @@ impl ScanRootSource {
 }
 
 /// Whether a persisted scan root is included or ignored by policy.
-#[derive(
-    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default,
-)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum PolicyDecision {
     /// Root participates in scan and query.
@@ -141,10 +136,7 @@ pub struct EntityFolderConfig {
 }
 
 impl EntityFolderConfig {
-    pub const fn new(
-        manifest_file: &'static str,
-        lock_file: &'static str,
-    ) -> Self {
+    pub const fn new(manifest_file: &'static str, lock_file: &'static str) -> Self {
         Self {
             manifest_file,
             lock_file,
@@ -154,10 +146,7 @@ impl EntityFolderConfig {
         }
     }
 
-    pub const fn with_body_file(
-        mut self,
-        body_file: &'static str,
-    ) -> Self {
+    pub const fn with_body_file(mut self, body_file: &'static str) -> Self {
         self.body_file = body_file;
         self
     }
@@ -173,9 +162,6 @@ pub fn parse_entity_manifest_toml(
     })
 }
 
-pub fn has_minimum_entity_contract(
-    entries: &[&str],
-    manifest_file: &str,
-) -> bool {
+pub fn has_minimum_entity_contract(entries: &[&str], manifest_file: &str) -> bool {
     entries.contains(&manifest_file)
 }

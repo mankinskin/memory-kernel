@@ -15,9 +15,7 @@ use crate::{
     error::StorageError,
     model::{
         entity::EntityManifest,
-        filesystem::{
-            EntityFolderConfig, ParseDiagnostic, parse_entity_manifest_toml,
-        },
+        filesystem::{parse_entity_manifest_toml, EntityFolderConfig, ParseDiagnostic},
     },
 };
 
@@ -71,10 +69,7 @@ pub struct EntityFs {
 }
 
 impl EntityFs {
-    pub const fn new(
-        manifest_file: &'static str,
-        lock_file: &'static str,
-    ) -> Self {
+    pub const fn new(manifest_file: &'static str, lock_file: &'static str) -> Self {
         Self {
             config: EntityFolderConfig::new(manifest_file, lock_file),
         }
@@ -104,10 +99,7 @@ impl EntityFs {
         if final_dir.exists() {
             return Err(StorageError::Io(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
-                format!(
-                    "entity folder already exists: {}",
-                    final_dir.display()
-                ),
+                format!("entity folder already exists: {}", final_dir.display()),
             )));
         }
 
@@ -126,18 +118,15 @@ impl EntityFs {
     }
 
     /// Read and parse the manifest from an existing entity folder.
-    pub fn read(
-        &self,
-        entity_path: &Path,
-    ) -> Result<EntityManifest, StorageError> {
+    pub fn read(&self, entity_path: &Path) -> Result<EntityManifest, StorageError> {
         let manifest_path = entity_path.join(self.config.manifest_file);
         let content = fs::read_to_string(&manifest_path)?;
-        parse_entity_manifest_toml(manifest_path.clone(), &content).map_err(
-            |d| StorageError::ParseError {
+        parse_entity_manifest_toml(manifest_path.clone(), &content).map_err(|d| {
+            StorageError::ParseError {
                 path: d.path,
                 reason: d.reason,
-            },
-        )
+            }
+        })
     }
 
     /// Apply a field patch to the manifest on disk.
@@ -162,10 +151,9 @@ impl EntityFs {
                 manifest.extra.insert(k.clone(), v.clone());
             }
             if let Some(state) = new_state {
-                manifest.extra.insert(
-                    "state".to_string(),
-                    Value::String(state.to_string()),
-                );
+                manifest
+                    .extra
+                    .insert("state".to_string(), Value::String(state.to_string()));
             }
             self.write_manifest(entity_path, &manifest)?;
             Ok(manifest)
@@ -176,10 +164,7 @@ impl EntityFs {
     }
 
     /// Physically delete an entity folder from disk.
-    pub fn delete(
-        &self,
-        entity_path: &Path,
-    ) -> Result<(), StorageError> {
+    pub fn delete(&self, entity_path: &Path) -> Result<(), StorageError> {
         std::fs::remove_dir_all(entity_path).map_err(StorageError::Io)
     }
 
@@ -189,8 +174,7 @@ impl EntityFs {
     pub fn scan_root(
         &self,
         scan_root: &Path,
-    ) -> Result<(Vec<EntityScanEntry>, Vec<ParseDiagnostic>), StorageError>
-    {
+    ) -> Result<(Vec<EntityScanEntry>, Vec<ParseDiagnostic>), StorageError> {
         let mut valid = Vec::new();
         let mut diags = Vec::new();
 
@@ -205,7 +189,7 @@ impl EntityFs {
 
             match self.load_scan_entry(path, id) {
                 Ok(Some(entry)) => valid.push(entry),
-                Ok(None) => {},
+                Ok(None) => {}
                 Err(diag) => diags.push(diag),
             }
         }
@@ -221,8 +205,7 @@ impl EntityFs {
     pub fn scan_root_candidates(
         &self,
         scan_root: &Path,
-    ) -> Result<(Vec<EntityCandidate>, Vec<ParseDiagnostic>), StorageError>
-    {
+    ) -> Result<(Vec<EntityCandidate>, Vec<ParseDiagnostic>), StorageError> {
         let mut candidates = Vec::new();
         let mut diags = Vec::new();
 
@@ -247,9 +230,7 @@ impl EntityFs {
             let manifest_mtime = fs::metadata(&manifest_path)
                 .ok()
                 .and_then(|meta| meta.modified().ok())
-                .and_then(|time| {
-                    time.duration_since(std::time::UNIX_EPOCH).ok()
-                })
+                .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
                 .map(|delta| delta.as_nanos());
 
             candidates.push(EntityCandidate {
@@ -277,9 +258,7 @@ impl EntityFs {
 
         match self.read(&path) {
             Ok(manifest) => Ok(Some(EntityScanEntry { id, path, manifest })),
-            Err(StorageError::ParseError { path, reason }) => {
-                Err(ParseDiagnostic { path, reason })
-            },
+            Err(StorageError::ParseError { path, reason }) => Err(ParseDiagnostic { path, reason }),
             Err(error) => Err(ParseDiagnostic {
                 path: manifest_path,
                 reason: error.to_string(),
@@ -290,10 +269,7 @@ impl EntityFs {
     // ── history ───────────────────────────────────────────────────────────────
 
     /// Read all history revisions for an entity (oldest first).
-    pub fn read_history(
-        &self,
-        entity_path: &Path,
-    ) -> Result<Vec<HistoryRevision>, StorageError> {
+    pub fn read_history(&self, entity_path: &Path) -> Result<Vec<HistoryRevision>, StorageError> {
         let path = entity_path.join(self.config.history_file);
         if !path.exists() {
             return Ok(Vec::new());
@@ -332,17 +308,13 @@ impl EntityFs {
         };
         let line = serde_json::to_string(&entry)
             .map_err(|e| StorageError::Serialization(e.to_string()))?;
-        let mut file =
-            OpenOptions::new().create(true).append(true).open(&path)?;
+        let mut file = OpenOptions::new().create(true).append(true).open(&path)?;
         writeln!(file, "{}", line)?;
         Ok(rev)
     }
 
     /// Ensure the assets subdirectory exists inside `entity_path`.
-    pub fn ensure_assets_dir(
-        &self,
-        entity_path: &Path,
-    ) -> Result<(), StorageError> {
+    pub fn ensure_assets_dir(&self, entity_path: &Path) -> Result<(), StorageError> {
         let assets = entity_path.join(self.config.assets_dir);
         if !assets.exists() {
             fs::create_dir_all(&assets)?;
@@ -351,10 +323,7 @@ impl EntityFs {
     }
 
     /// Reformat an existing entity's manifest to canonical field ordering.
-    pub fn reformat(
-        &self,
-        entity_path: &Path,
-    ) -> Result<(), StorageError> {
+    pub fn reformat(&self, entity_path: &Path) -> Result<(), StorageError> {
         let lock_path = entity_path.join(self.config.lock_file);
         let lock_file = acquire_lock(&lock_path)?;
         let result = (|| -> Result<(), StorageError> {
@@ -367,15 +336,11 @@ impl EntityFs {
     }
 
     /// Write or overwrite the configured body markdown file for an entity.
-    pub fn write_description(
-        &self,
-        entity_path: &Path,
-        text: &str,
-    ) -> Result<(), StorageError> {
+    pub fn write_description(&self, entity_path: &Path, text: &str) -> Result<(), StorageError> {
         let lock_path = entity_path.join(self.config.lock_file);
         let lock_file = acquire_lock(&lock_path)?;
-        let result = fs::write(entity_path.join(self.config.body_file), text)
-            .map_err(StorageError::Io);
+        let result =
+            fs::write(entity_path.join(self.config.body_file), text).map_err(StorageError::Io);
         release_lock(&lock_file, &lock_path);
         result
     }
@@ -384,10 +349,7 @@ impl EntityFs {
     ///
     /// When a domain has migrated away from `description.md`, this also falls
     /// back to the legacy filename so older folders remain readable.
-    pub fn read_description(
-        &self,
-        entity_path: &Path,
-    ) -> Option<String> {
+    pub fn read_description(&self, entity_path: &Path) -> Option<String> {
         let configured = entity_path.join(self.config.body_file);
         fs::read_to_string(&configured).ok().or_else(|| {
             (self.config.body_file != "description.md")
@@ -398,13 +360,8 @@ impl EntityFs {
 
     // ── internal ──────────────────────────────────────────────────────────────
 
-    fn write_manifest(
-        &self,
-        dir: &Path,
-        manifest: &EntityManifest,
-    ) -> Result<(), StorageError> {
-        let toml_str =
-            crate::model::manifest_format::format_manifest_toml(manifest);
+    fn write_manifest(&self, dir: &Path, manifest: &EntityManifest) -> Result<(), StorageError> {
+        let toml_str = crate::model::manifest_format::format_manifest_toml(manifest);
         let path = dir.join(self.config.manifest_file);
         fs::write(&path, toml_str)?;
         Ok(())
@@ -419,17 +376,12 @@ fn acquire_lock(lock_path: &Path) -> Result<File, StorageError> {
     Ok(file)
 }
 
-fn release_lock(
-    file: &File,
-    lock_path: &Path,
-) {
+fn release_lock(file: &File, lock_path: &Path) {
     let _ = file.unlock();
     let _ = fs::remove_file(lock_path);
 }
 
-fn read_scan_root(
-    scan_root: &Path
-) -> Result<Option<fs::ReadDir>, StorageError> {
+fn read_scan_root(scan_root: &Path) -> Result<Option<fs::ReadDir>, StorageError> {
     match fs::read_dir(scan_root) {
         Ok(read_dir) => Ok(Some(read_dir)),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -461,21 +413,19 @@ mod tests {
 
     #[test]
     fn history_revision_backward_compat_no_author() {
-        let json = r#"{"rev":1,"ts":"2025-01-01T00:00:00Z","fields":{"state":"new","title":"Old entry"}}"#;
+        let json =
+            r#"{"rev":1,"ts":"2025-01-01T00:00:00Z","fields":{"state":"new","title":"Old entry"}}"#;
         let rev: HistoryRevision = serde_json::from_str(json)
             .expect("should deserialize legacy revision without author field");
         assert_eq!(rev.rev, 1);
-        assert_eq!(
-            rev.author, None,
-            "author should be None for legacy entries"
-        );
+        assert_eq!(rev.author, None, "author should be None for legacy entries");
     }
 
     #[test]
     fn history_revision_with_author() {
         let json = r#"{"rev":2,"ts":"2025-01-02T00:00:00Z","fields":{},"author":"alice"}"#;
-        let rev: HistoryRevision = serde_json::from_str(json)
-            .expect("should deserialize revision with author");
+        let rev: HistoryRevision =
+            serde_json::from_str(json).expect("should deserialize revision with author");
         assert_eq!(rev.author, Some("alice".to_string()));
     }
 

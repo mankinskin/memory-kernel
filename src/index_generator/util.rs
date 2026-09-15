@@ -14,10 +14,7 @@ use uuid::Uuid;
 /// When `abs_path` is not under `workspace_root` the original path is returned
 /// (with separators normalized). Output is always `/`-separated so generated
 /// artifacts are byte-identical across platforms.
-pub fn to_relative_slash(
-    workspace_root: &Path,
-    abs_path: &Path,
-) -> String {
+pub fn to_relative_slash(workspace_root: &Path, abs_path: &Path) -> String {
     abs_path
         .strip_prefix(workspace_root)
         .unwrap_or(abs_path)
@@ -29,10 +26,7 @@ pub fn to_relative_slash(
 ///
 /// Used for workspace summary and agent-hook entries that have no store UUID.
 /// Deterministic: identical inputs always yield the same UUID (UUID v5).
-pub fn deterministic_uuid(
-    namespace: Uuid,
-    slug: &str,
-) -> Uuid {
+pub fn deterministic_uuid(namespace: Uuid, slug: &str) -> Uuid {
     Uuid::new_v5(&namespace, slug.as_bytes())
 }
 

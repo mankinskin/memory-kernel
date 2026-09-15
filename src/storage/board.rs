@@ -37,13 +37,9 @@ impl BoardEntry {
     ///
     /// Stale means the entry is `Active` but the heartbeat has expired.
     /// This is computed dynamically and is **not** written back to storage.
-    pub fn is_stale_at(
-        &self,
-        now: DateTime<Utc>,
-    ) -> bool {
+    pub fn is_stale_at(&self, now: DateTime<Utc>) -> bool {
         self.status == BoardEntryStatus::Active
-            && now
-                > self.last_heartbeat + Duration::seconds(self.ttl_secs as i64)
+            && now > self.last_heartbeat + Duration::seconds(self.ttl_secs as i64)
     }
 }
 
@@ -199,9 +195,7 @@ pub enum BoardError {
     TicketNotFound(Uuid),
     #[error("Entry not found: {0}")]
     EntryNotFound(Uuid),
-    #[error(
-        "clean token is stale: board has changed since the preview was generated"
-    )]
+    #[error("clean token is stale: board has changed since the preview was generated")]
     StaleCleanToken,
     #[error(
         "file rename conflict: '{path}' is owned by agent {conflicting_agent} (ticket {conflicting_ticket})"
@@ -221,10 +215,7 @@ pub enum BoardError {
 /// timestamp at which the preview was generated.
 ///
 /// Token format: `"{sha256_hex}|{generated_at_millis}"`.
-fn compute_clean_token(
-    sorted_ids: &[Uuid],
-    generated_at: DateTime<Utc>,
-) -> String {
+fn compute_clean_token(sorted_ids: &[Uuid], generated_at: DateTime<Utc>) -> String {
     let ts_millis = generated_at.timestamp_millis();
     let mut hasher = Sha256::new();
     for id in sorted_ids {
@@ -236,52 +227,41 @@ fn compute_clean_token(
     format!("{hash_hex}|{ts_millis}")
 }
 
-fn parse_clean_token(
-    token: &str
-) -> Result<(String, DateTime<Utc>), BoardError> {
+fn parse_clean_token(token: &str) -> Result<(String, DateTime<Utc>), BoardError> {
     let Some((hash_hex, millis_str)) = token.split_once('|') else {
         return Err(BoardError::StaleCleanToken);
     };
     let ts_millis: i64 = millis_str
         .parse()
         .map_err(|_| BoardError::StaleCleanToken)?;
-    let generated_at = DateTime::from_timestamp_millis(ts_millis)
-        .ok_or(BoardError::StaleCleanToken)?;
+    let generated_at =
+        DateTime::from_timestamp_millis(ts_millis).ok_or(BoardError::StaleCleanToken)?;
     Ok((hash_hex.to_string(), generated_at))
 }
 
 // ── Serde helpers ─────────────────────────────────────────────────────────────
 
 fn serialize_entry(entry: &BoardEntry) -> Result<Vec<u8>, BoardError> {
-    bincode::serialize(entry).map_err(|e| {
-        BoardError::Storage(StorageError::Serialization(e.to_string()))
-    })
+    bincode::serialize(entry)
+        .map_err(|e| BoardError::Storage(StorageError::Serialization(e.to_string())))
 }
 
 fn deserialize_entry(bytes: &[u8]) -> Result<BoardEntry, BoardError> {
     // Order is load-bearing: shorter shapes can parse a longer payload prefix.
     bincode::deserialize(bytes)
-        .or_else(|_| {
-            bincode::deserialize::<BoardEntryV2>(bytes).map(Into::into)
-        })
-        .or_else(|_| {
-            bincode::deserialize::<BoardEntryV1>(bytes).map(Into::into)
-        })
-        .map_err(|e| {
-            BoardError::Storage(StorageError::Serialization(e.to_string()))
-        })
+        .or_else(|_| bincode::deserialize::<BoardEntryV2>(bytes).map(Into::into))
+        .or_else(|_| bincode::deserialize::<BoardEntryV1>(bytes).map(Into::into))
+        .map_err(|e| BoardError::Storage(StorageError::Serialization(e.to_string())))
 }
 
 fn serialize_config(config: &BoardConfig) -> Result<Vec<u8>, BoardError> {
-    bincode::serialize(config).map_err(|e| {
-        BoardError::Storage(StorageError::Serialization(e.to_string()))
-    })
+    bincode::serialize(config)
+        .map_err(|e| BoardError::Storage(StorageError::Serialization(e.to_string())))
 }
 
 fn deserialize_config(bytes: &[u8]) -> Result<BoardConfig, BoardError> {
-    bincode::deserialize(bytes).map_err(|e| {
-        BoardError::Storage(StorageError::Serialization(e.to_string()))
-    })
+    bincode::deserialize(bytes)
+        .map_err(|e| BoardError::Storage(StorageError::Serialization(e.to_string())))
 }
 
 fn db_err(e: rusqlite::Error) -> BoardError {

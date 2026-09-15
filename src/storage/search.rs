@@ -5,11 +5,8 @@ use std::{
 };
 
 use tantivy::{
+    schema::{Field, Schema, Value as TantivyValue, FAST, INDEXED, STORED, STRING, TEXT},
     Index, IndexWriter, TantivyDocument, TantivyError, Term,
-    schema::{
-        FAST, Field, INDEXED, STORED, STRING, Schema, TEXT,
-        Value as TantivyValue,
-    },
 };
 use uuid::Uuid;
 
@@ -140,10 +137,7 @@ impl TantivySearchIndex {
         writer: &mut IndexWriter,
         doc: &SearchDocumentInput,
     ) -> Result<(), StorageError> {
-        writer.delete_term(Term::from_field_text(
-            self.fields.id,
-            &doc.id.to_string(),
-        ));
+        writer.delete_term(Term::from_field_text(self.fields.id, &doc.id.to_string()));
 
         let mut tantivy_doc = TantivyDocument::default();
         tantivy_doc.add_text(self.fields.id, doc.id.to_string());
@@ -153,8 +147,7 @@ impl TantivySearchIndex {
         if let Some(body) = &doc.body {
             tantivy_doc.add_text(self.fields.body, body);
         }
-        tantivy_doc
-            .add_text(self.fields.state, doc.state.as_deref().unwrap_or(""));
+        tantivy_doc.add_text(self.fields.state, doc.state.as_deref().unwrap_or(""));
         tantivy_doc.add_text(
             self.fields.ticket_type,
             doc.ticket_type.as_deref().unwrap_or(""),
@@ -171,9 +164,7 @@ impl TantivySearchIndex {
         tantivy_doc.add_i64(self.fields.effort, effort_value);
         writer
             .add_document(tantivy_doc)
-            .map_err(|e: TantivyError| {
-                StorageError::SearchIndex(e.to_string())
-            })?;
+            .map_err(|e: TantivyError| StorageError::SearchIndex(e.to_string()))?;
         Ok(())
     }
 
@@ -203,7 +194,7 @@ impl TantivySearchIndex {
                 {
                     thread::sleep(Duration::from_millis(delay_ms));
                     delay_ms = (delay_ms * 2).min(500);
-                },
+                }
                 Err(error) => return Err(error),
             }
         }
@@ -269,8 +260,7 @@ impl TantivySearchIndex {
     /// on-disk damage that a rebuild repairs. Rebuilding is always safe because
     /// the filesystem entities are the authoritative source.
     pub fn is_rebuildable_read_failure(error: &StorageError) -> bool {
-        matches!(error, StorageError::SearchIndex(_))
-            && !Self::is_retryable_search_error(error)
+        matches!(error, StorageError::SearchIndex(_)) && !Self::is_retryable_search_error(error)
     }
 
     pub fn reset_dir(&self) -> Result<(), StorageError> {
@@ -321,7 +311,7 @@ impl TantivySearchIndex {
                     "search index unreadable; rebuilding from current schema",
                 );
                 return self.create_fresh_index();
-            },
+            }
         };
 
         // Invariant 3: the on-disk schema must match the current schema.
@@ -354,9 +344,7 @@ impl TantivySearchIndex {
     /// This is the read-only counterpart to [`Self::ensure_ready`], intended
     /// for health checks and tests. `Ok(None)` means the index is ready (or is
     /// an empty directory that will be created on first use).
-    pub fn check_invariants(
-        &self
-    ) -> Result<Option<IndexInvariant>, StorageError> {
+    pub fn check_invariants(&self) -> Result<Option<IndexInvariant>, StorageError> {
         if !self.dir.exists() {
             return Ok(Some(IndexInvariant::DirectoryExists));
         }
@@ -410,7 +398,7 @@ impl TantivySearchIndex {
             Some(_) => {
                 self.create_fresh_index()?;
                 Ok(true)
-            },
+            }
         }
     }
 
@@ -454,10 +442,7 @@ impl TantivySearchIndex {
         }])
     }
 
-    pub fn upsert_batch(
-        &self,
-        docs: &[SearchDocumentInput],
-    ) -> Result<(), StorageError> {
+    pub fn upsert_batch(&self, docs: &[SearchDocumentInput]) -> Result<(), StorageError> {
         if docs.is_empty() {
             return Ok(());
         }
@@ -483,17 +468,11 @@ impl TantivySearchIndex {
         })
     }
 
-    pub fn remove(
-        &self,
-        id: &Uuid,
-    ) -> Result<(), StorageError> {
+    pub fn remove(&self, id: &Uuid) -> Result<(), StorageError> {
         self.remove_batch(&[*id])
     }
 
-    pub fn remove_batch(
-        &self,
-        ids: &[Uuid],
-    ) -> Result<(), StorageError> {
+    pub fn remove_batch(&self, ids: &[Uuid]) -> Result<(), StorageError> {
         if ids.is_empty() {
             return Ok(());
         }
@@ -502,14 +481,11 @@ impl TantivySearchIndex {
             let index = self.open_index()?;
             let mut writer = Self::make_writer(&index)?;
             for id in ids {
-                writer.delete_term(Term::from_field_text(
-                    self.fields.id,
-                    &id.to_string(),
-                ));
+                writer.delete_term(Term::from_field_text(self.fields.id, &id.to_string()));
             }
-            writer.commit().map_err(|e: TantivyError| {
-                StorageError::SearchIndex(e.to_string())
-            })?;
+            writer
+                .commit()
+                .map_err(|e: TantivyError| StorageError::SearchIndex(e.to_string()))?;
             writer
                 .wait_merging_threads()
                 .map_err(|e| StorageError::SearchIndex(e.to_string()))?;
@@ -523,12 +499,12 @@ impl TantivySearchIndex {
         Self::with_retry(|| {
             let index = self.open_index()?;
             let mut writer = Self::make_writer(&index)?;
-            writer.delete_all_documents().map_err(|e: TantivyError| {
-                StorageError::SearchIndex(e.to_string())
-            })?;
-            writer.commit().map_err(|e: TantivyError| {
-                StorageError::SearchIndex(e.to_string())
-            })?;
+            writer
+                .delete_all_documents()
+                .map_err(|e: TantivyError| StorageError::SearchIndex(e.to_string()))?;
+            writer
+                .commit()
+                .map_err(|e: TantivyError| StorageError::SearchIndex(e.to_string()))?;
             writer
                 .wait_merging_threads()
                 .map_err(|e| StorageError::SearchIndex(e.to_string()))?;
@@ -539,11 +515,7 @@ impl TantivySearchIndex {
 
     /// Search using a parsed `Expr` AST.
     /// Returns up to `limit` results ordered by relevance score.
-    pub fn search(
-        &self,
-        expr: &Expr,
-        limit: usize,
-    ) -> Result<Vec<SearchResult>, StorageError> {
+    pub fn search(&self, expr: &Expr, limit: usize) -> Result<Vec<SearchResult>, StorageError> {
         use tantivy::{
             collector::TopDocs,
             query::{AllQuery, BooleanQuery, Occur, Query, TermQuery},
@@ -558,8 +530,7 @@ impl TantivySearchIndex {
                 .map_err(|e| StorageError::SearchIndex(e.to_string()))?;
             let searcher = reader.searcher();
 
-            let query: Box<dyn Query> =
-                expr_to_query(expr, &self.fields, &index);
+            let query: Box<dyn Query> = expr_to_query(expr, &self.fields, &index);
 
             let top_docs = searcher
                 .search(&*query, &TopDocs::with_limit(limit))
@@ -574,21 +545,16 @@ impl TantivySearchIndex {
                     .map_err(|e| StorageError::SearchIndex(e.to_string()))?;
 
                 let id_str = get_text(&doc, self.fields.id, &schema);
-                let id: Uuid =
-                    match id_str.as_deref().and_then(|s| s.parse().ok()) {
-                        Some(u) => u,
-                        None => continue,
-                    };
+                let id: Uuid = match id_str.as_deref().and_then(|s| s.parse().ok()) {
+                    Some(u) => u,
+                    None => continue,
+                };
 
                 results.push(SearchResult {
                     id,
                     title: get_text(&doc, self.fields.title, &schema),
                     state: get_text(&doc, self.fields.state, &schema),
-                    ticket_type: get_text(
-                        &doc,
-                        self.fields.ticket_type,
-                        &schema,
-                    ),
+                    ticket_type: get_text(&doc, self.fields.ticket_type, &schema),
                     snippet: get_text(&doc, self.fields.body, &schema)
                         .map(|b| truncate_snippet(&b, 120)),
                     score,
@@ -622,10 +588,7 @@ impl TantivySearchIndex {
 mod search_query;
 use search_query::*;
 
-fn truncate_snippet(
-    text: &str,
-    max_chars: usize,
-) -> String {
+fn truncate_snippet(text: &str, max_chars: usize) -> String {
     let mut s: String = text.chars().take(max_chars).collect();
     if text.chars().count() > max_chars {
         s.push_str("…");

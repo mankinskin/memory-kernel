@@ -14,7 +14,7 @@ use std::path::Path;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::{Deserialize, Serialize};
 
-use crate::workspace::{TICKET_INDEX_DIR, normalize_slashes};
+use crate::workspace::{normalize_slashes, TICKET_INDEX_DIR};
 
 /// Policy file name, resolved under `<workspace_root>/.ticket/`.
 pub const WORKSPACE_POLICY_FILE: &str = "workspace-policy.toml";
@@ -104,27 +104,18 @@ impl WorkspacePolicy {
     }
 
     /// Returns `true` when `rel_path` matches any `ignore_workspaces` pattern.
-    pub fn matches_ignore(
-        &self,
-        rel_path: &Path,
-    ) -> bool {
+    pub fn matches_ignore(&self, rel_path: &Path) -> bool {
         matches_any(&self.ignore_workspaces, rel_path)
     }
 
     /// Returns `true` when `rel_path` matches any `include_overrides` pattern.
-    pub fn matches_include_override(
-        &self,
-        rel_path: &Path,
-    ) -> bool {
+    pub fn matches_include_override(&self, rel_path: &Path) -> bool {
         matches_any(&self.include_overrides, rel_path)
     }
 
     /// Returns `true` when `candidate_dir` contains any configured ignore
     /// marker file.
-    pub fn has_ignore_marker(
-        &self,
-        candidate_dir: &Path,
-    ) -> bool {
+    pub fn has_ignore_marker(&self, candidate_dir: &Path) -> bool {
         self.ignore_markers
             .iter()
             .any(|marker| candidate_dir.join(marker).is_file())
@@ -135,11 +126,7 @@ impl WorkspacePolicy {
     /// A candidate is ignored when it matches an `ignore_workspaces` glob or
     /// carries an ignore marker, unless an `include_overrides` pattern applies
     /// (overrides always win).
-    pub fn is_ignored(
-        &self,
-        rel_path: &Path,
-        candidate_dir: &Path,
-    ) -> bool {
+    pub fn is_ignored(&self, rel_path: &Path, candidate_dir: &Path) -> bool {
         if self.matches_include_override(rel_path) {
             return false;
         }
@@ -163,7 +150,7 @@ pub fn load_workspace_policy(workspace_root: &Path) -> WorkspacePolicy {
             Ok(mut policy) => {
                 policy.compatibility_mode = false;
                 policy
-            },
+            }
             Err(error) => {
                 tracing::warn!(
                     path = %trace_path,
@@ -171,7 +158,7 @@ pub fn load_workspace_policy(workspace_root: &Path) -> WorkspacePolicy {
                     "failed to parse workspace-policy.toml; using compatibility-mode defaults"
                 );
                 WorkspacePolicy::compatibility_default()
-            },
+            }
         },
         Err(_) => {
             tracing::warn!(
@@ -179,7 +166,7 @@ pub fn load_workspace_policy(workspace_root: &Path) -> WorkspacePolicy {
                 "no .ticket/workspace-policy.toml found; using compatibility-mode discovery (descendants + ancestors). Add an explicit policy to control scan-root inclusion."
             );
             WorkspacePolicy::compatibility_default()
-        },
+        }
     }
 }
 
@@ -189,9 +176,7 @@ pub fn load_workspace_policy(workspace_root: &Path) -> WorkspacePolicy {
 /// (malformed files yield `WorkspacePolicy::default()` so editing callers never
 /// silently drop all fields). Intended for mutation flows that should start
 /// from documented defaults rather than compatibility-mode defaults.
-pub fn load_workspace_policy_file(
-    workspace_root: &Path
-) -> Option<WorkspacePolicy> {
+pub fn load_workspace_policy_file(workspace_root: &Path) -> Option<WorkspacePolicy> {
     let policy_path = workspace_root
         .join(TICKET_INDEX_DIR)
         .join(WORKSPACE_POLICY_FILE);
@@ -211,9 +196,8 @@ pub fn save_workspace_policy(
     let ticket_dir = workspace_root.join(TICKET_INDEX_DIR);
     std::fs::create_dir_all(&ticket_dir)?;
     let policy_path = ticket_dir.join(WORKSPACE_POLICY_FILE);
-    let contents = toml::to_string_pretty(policy).map_err(|error| {
-        std::io::Error::new(std::io::ErrorKind::InvalidData, error)
-    })?;
+    let contents = toml::to_string_pretty(policy)
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
     std::fs::write(policy_path, contents)
 }
 ///
@@ -235,10 +219,7 @@ fn normalize_rel(rel_path: &Path) -> String {
     rel_path.to_string_lossy().replace('\\', "/")
 }
 
-fn matches_any(
-    patterns: &[String],
-    rel_path: &Path,
-) -> bool {
+fn matches_any(patterns: &[String], rel_path: &Path) -> bool {
     if patterns.is_empty() {
         return false;
     }
@@ -279,8 +260,7 @@ ignore_markers = [".skip"]
 
     #[test]
     fn applies_documented_defaults_for_partial_file() {
-        let policy: WorkspacePolicy =
-            toml::from_str("ignore_workspaces = [\"foo\"]").unwrap();
+        let policy: WorkspacePolicy = toml::from_str("ignore_workspaces = [\"foo\"]").unwrap();
         assert!(policy.include_descendants);
         assert!(!policy.include_ancestors);
         assert!(policy.deny_external_paths);
@@ -341,10 +321,7 @@ ignore_markers = [".skip"]
     #[test]
     fn glob_matches_and_non_matches() {
         let policy = WorkspacePolicy {
-            ignore_workspaces: vec![
-                "fixtures/**".to_string(),
-                "test-*".to_string(),
-            ],
+            ignore_workspaces: vec!["fixtures/**".to_string(), "test-*".to_string()],
             ..WorkspacePolicy::default()
         };
         assert!(policy.matches_ignore(&PathBuf::from("fixtures/a/b")));

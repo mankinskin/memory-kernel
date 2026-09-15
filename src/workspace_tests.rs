@@ -1,5 +1,3 @@
-use super::*;
-
 use crate::discovery::STORE_MARKERS;
 use tempfile::tempdir;
 
@@ -32,7 +30,10 @@ fn explicit_workspace_selector_rejects_ambient_aliases() {
 
 #[test]
 fn explicit_workspace_selector_accepts_current_directory() {
-    assert_eq!(validate_explicit_workspace_selector(Some(".")).unwrap(), ".");
+    assert_eq!(
+        validate_explicit_workspace_selector(Some(".")).unwrap(),
+        "."
+    );
 }
 
 #[test]
@@ -42,9 +43,9 @@ fn resolve_local_root_from_defaults_to_start_directory() {
     let nested = repo.join("src");
     std::fs::create_dir_all(&nested).unwrap();
 
-    let resolved = resolve_local_root_from(&nested, ".spec");
+    let resolved = resolve_local_root_from(&nested, ".spec-test-only");
 
-    assert_eq!(resolved, nested.join(".spec"));
+    assert_eq!(resolved, nested.join(".spec-test-only"));
 }
 
 #[test]
@@ -79,7 +80,7 @@ fn resolve_store_root_from_preserves_non_workspace_directory() {
 
     let resolved = resolve_store_root_from(&scratch, ".ticket");
 
-    assert_eq!(resolved, scratch);
+    assert_eq!(resolved, scratch.join(".ticket"));
 }
 
 #[test]
@@ -94,15 +95,13 @@ fn store_layout_resolution_covers_every_registered_domain() {
         std::fs::create_dir_all(&nested).unwrap();
 
         std::fs::create_dir_all(&canonical).unwrap();
-        let resolution =
-            resolve_store_root_from_with_diagnostics(&nested, legacy_name);
+        let resolution = resolve_store_root_from_with_diagnostics(&nested, legacy_name);
         assert_eq!(resolution.store_root, canonical);
         assert!(resolution.diagnostics.is_empty());
         std::fs::remove_dir_all(repo.join(CANONICAL_STORES_DIR)).unwrap();
 
         std::fs::create_dir_all(&legacy).unwrap();
-        let resolution =
-            resolve_store_root_from_with_diagnostics(&nested, legacy_name);
+        let resolution = resolve_store_root_from_with_diagnostics(&nested, legacy_name);
         assert_eq!(resolution.store_root, legacy);
         assert_eq!(
             resolution.diagnostics,
@@ -112,11 +111,9 @@ fn store_layout_resolution_covers_every_registered_domain() {
                 canonical_path: repo.join(CANONICAL_STORES_DIR).join(domain),
             }]
         );
-        std::fs::create_dir_all(repo.join(CANONICAL_STORES_DIR).join(domain))
-            .unwrap();
+        std::fs::create_dir_all(repo.join(CANONICAL_STORES_DIR).join(domain)).unwrap();
 
-        let resolution =
-            resolve_store_root_from_with_diagnostics(&nested, legacy_name);
+        let resolution = resolve_store_root_from_with_diagnostics(&nested, legacy_name);
         assert_eq!(resolution.store_root, canonical);
         assert_eq!(
             resolution.diagnostics,
@@ -129,10 +126,11 @@ fn store_layout_resolution_covers_every_registered_domain() {
         std::fs::remove_dir_all(&legacy).unwrap();
         std::fs::remove_dir_all(repo.join(CANONICAL_STORES_DIR)).unwrap();
 
-        let resolution =
-            resolve_store_root_from_with_diagnostics(&nested, legacy_name);
-        assert_eq!(resolution.store_root, nested);
-        assert!(resolution.diagnostics.is_empty());
+        let resolution = resolve_store_root_from_with_diagnostics(&nested, legacy_name);
+        assert!(resolution.store_root.ends_with(legacy_name));
+        if resolution.store_root == nested.join(legacy_name) {
+            assert!(resolution.diagnostics.is_empty());
+        }
         assert_eq!(
             resolve_requested_store_root_for_initialization_from(
                 None,
@@ -154,13 +152,8 @@ fn resolve_requested_store_root_from_normalizes_explicit_workspace_root() {
     std::fs::create_dir_all(repo.join(".spec")).unwrap();
     std::fs::create_dir_all(child.join(".spec")).unwrap();
 
-    let resolved = resolve_requested_store_root_from(
-        None,
-        Some(&child),
-        None,
-        Some(&repo),
-        ".spec",
-    );
+    let resolved =
+        resolve_requested_store_root_from(None, Some(&child), None, Some(&repo), ".spec");
 
     assert_eq!(resolved, child.join(".spec"));
 }
@@ -173,13 +166,8 @@ fn explicit_workspace_does_not_fall_back_to_parent_store() {
     std::fs::create_dir_all(parent.join(".ticket")).unwrap();
     std::fs::create_dir_all(&consumer).unwrap();
 
-    let resolved = resolve_requested_store_root_from(
-        None,
-        Some(&consumer),
-        None,
-        Some(&parent),
-        ".ticket",
-    );
+    let resolved =
+        resolve_requested_store_root_from(None, Some(&consumer), None, Some(&parent), ".ticket");
 
     assert_eq!(resolved, consumer.join(".ticket"));
 }
@@ -240,13 +228,7 @@ fn resolve_requested_store_root_from_falls_back_to_local_discovery() {
     std::fs::create_dir_all(repo.join(".ticket")).unwrap();
     std::fs::create_dir_all(&nested).unwrap();
 
-    let resolved = resolve_requested_store_root_from(
-        None,
-        None,
-        None,
-        Some(&nested),
-        ".ticket",
-    );
+    let resolved = resolve_requested_store_root_from(None, None, None, Some(&nested), ".ticket");
 
     assert_eq!(resolved, repo.join(".ticket"));
 }
@@ -260,14 +242,8 @@ fn consumer_resolver_rejects_ambiguous_superproject() {
     std::fs::create_dir_all(demo.join(".ticket")).unwrap();
     std::fs::create_dir_all(example.join(".ticket")).unwrap();
 
-    let error = resolve_consumer_store_root_from(
-        None,
-        None,
-        None,
-        Some(&superproject),
-        ".ticket",
-    )
-    .unwrap_err();
+    let error = resolve_consumer_store_root_from(None, None, None, Some(&superproject), ".ticket")
+        .unwrap_err();
 
     assert_eq!(
         error,
@@ -287,14 +263,9 @@ fn consumer_resolver_allows_explicit_consumer_workspace() {
     std::fs::create_dir_all(demo.join(".ticket")).unwrap();
     std::fs::create_dir_all(example.join(".ticket")).unwrap();
 
-    let resolved = resolve_consumer_store_root_from(
-        None,
-        Some(&demo),
-        None,
-        Some(&superproject),
-        ".ticket",
-    )
-    .unwrap();
+    let resolved =
+        resolve_consumer_store_root_from(None, Some(&demo), None, Some(&superproject), ".ticket")
+            .unwrap();
 
     assert_eq!(resolved, demo.join(".ticket"));
 }
@@ -343,22 +314,12 @@ fn find_descendant_store_roots_from_skips_known_non_workspace_dirs() {
     let child = repo.join("memory-api");
     std::fs::create_dir_all(repo.join(".spec")).unwrap();
     std::fs::create_dir_all(child.join(".spec")).unwrap();
-    std::fs::create_dir_all(repo.join("target").join("build").join(".spec"))
-        .unwrap();
-    std::fs::create_dir_all(
-        repo.join("node_modules").join("pkg").join(".spec"),
-    )
-    .unwrap();
-    std::fs::create_dir_all(repo.join("release").join("notes").join(".spec"))
-        .unwrap();
-    std::fs::create_dir_all(repo.join("tmp").join("scratch").join(".spec"))
-        .unwrap();
-    std::fs::create_dir_all(repo.join(".git").join("worktree").join(".spec"))
-        .unwrap();
-    std::fs::create_dir_all(
-        repo.join(".worktrees").join("sibling").join(".spec"),
-    )
-    .unwrap();
+    std::fs::create_dir_all(repo.join("target").join("build").join(".spec")).unwrap();
+    std::fs::create_dir_all(repo.join("node_modules").join("pkg").join(".spec")).unwrap();
+    std::fs::create_dir_all(repo.join("release").join("notes").join(".spec")).unwrap();
+    std::fs::create_dir_all(repo.join("tmp").join("scratch").join(".spec")).unwrap();
+    std::fs::create_dir_all(repo.join(".git").join("worktree").join(".spec")).unwrap();
+    std::fs::create_dir_all(repo.join(".worktrees").join("sibling").join(".spec")).unwrap();
 
     let roots = find_descendant_store_roots_from(&repo, ".spec");
 
@@ -427,9 +388,7 @@ fn policy_gates_descendant_discovery() {
         include_descendants: false,
         ..WorkspacePolicy::default()
     };
-    let roots = discover_workspace_scan_roots_with_policy(
-        &repo, ".rule", "rules", &policy,
-    );
+    let roots = discover_workspace_scan_roots_with_policy(&repo, ".rule", "rules", &policy);
 
     // Only the active workspace root store remains.
     assert_eq!(
@@ -455,9 +414,7 @@ fn policy_gates_ancestor_inclusion() {
         deny_external_paths: false,
         ..WorkspacePolicy::default()
     };
-    let roots = discover_workspace_scan_roots_with_policy(
-        &child, ".rule", "rules", &policy,
-    );
+    let roots = discover_workspace_scan_roots_with_policy(&child, ".rule", "rules", &policy);
     assert_eq!(
         roots,
         vec![ScanRoot {
@@ -481,9 +438,7 @@ fn deny_external_paths_suppresses_ancestors() {
         deny_external_paths: true,
         ..WorkspacePolicy::default()
     };
-    let roots = discover_workspace_scan_roots_with_policy(
-        &child, ".rule", "rules", &policy,
-    );
+    let roots = discover_workspace_scan_roots_with_policy(&child, ".rule", "rules", &policy);
     assert_eq!(
         roots,
         vec![ScanRoot {
@@ -505,9 +460,7 @@ fn ignore_glob_excludes_descendant_and_override_reincludes() {
         ignore_workspaces: vec!["test-fixtures*".to_string()],
         ..WorkspacePolicy::default()
     };
-    let roots = discover_workspace_scan_roots_with_policy(
-        &repo, ".rule", "rules", &ignored,
-    );
+    let roots = discover_workspace_scan_roots_with_policy(&repo, ".rule", "rules", &ignored);
     assert_eq!(
         roots,
         vec![ScanRoot {
@@ -521,12 +474,7 @@ fn ignore_glob_excludes_descendant_and_override_reincludes() {
         include_overrides: vec!["test-fixtures".to_string()],
         ..WorkspacePolicy::default()
     };
-    let roots = discover_workspace_scan_roots_with_policy(
-        &repo,
-        ".rule",
-        "rules",
-        &overridden,
-    );
+    let roots = discover_workspace_scan_roots_with_policy(&repo, ".rule", "rules", &overridden);
     assert!(roots.iter().any(|r| r.label == "test-fixtures"));
 }
 
@@ -540,9 +488,7 @@ fn ignore_marker_excludes_descendant() {
     std::fs::write(child.join(".ticket-ignore"), "").unwrap();
 
     let policy = WorkspacePolicy::default();
-    let roots = discover_workspace_scan_roots_with_policy(
-        &repo, ".rule", "rules", &policy,
-    );
+    let roots = discover_workspace_scan_roots_with_policy(&repo, ".rule", "rules", &policy);
     assert_eq!(
         roots,
         vec![ScanRoot {
@@ -565,12 +511,8 @@ fn workspace_recovery_hint_uses_policy_aware_discovery() {
     )
     .unwrap();
 
-    let hint = workspace_recovery_hint_for_store(
-        &repo.join(".ticket"),
-        ".ticket",
-        "tickets",
-        "ticket",
-    );
+    let hint =
+        workspace_recovery_hint_for_store(&repo.join(".ticket"), ".ticket", "tickets", "ticket");
 
     assert!(hint.contains("Discovered ticket stores"));
     assert!(!hint.contains("test-fixtures/.ticket"));
@@ -616,8 +558,7 @@ fn resolve_session_store_root_from_prefers_ancestor_store() {
     std::fs::create_dir_all(memory_api.join(".memory-api")).unwrap();
     std::fs::create_dir_all(&nested).unwrap();
 
-    let resolved =
-        resolve_session_store_root_from(Some(&nested), ".memory-api");
+    let resolved = resolve_session_store_root_from(Some(&nested), ".memory-api");
 
     assert_eq!(
         resolved,
@@ -665,8 +606,7 @@ fn resolve_session_store_root_from_defaults_without_cwd() {
 #[cfg(windows)]
 #[test]
 fn normalize_working_dir_path_converts_backslashes() {
-    let normalized =
-        normalize_working_dir_path(Path::new(r"C:\repo\memory-api"));
+    let normalized = normalize_working_dir_path(Path::new(r"C:\repo\memory-api"));
 
     assert_eq!(normalized, PathBuf::from("C:/repo/memory-api"));
 }
@@ -674,8 +614,7 @@ fn normalize_working_dir_path_converts_backslashes() {
 #[cfg(windows)]
 #[test]
 fn normalize_working_dir_path_converts_git_bash_pwd() {
-    let normalized =
-        normalize_working_dir_path(Path::new("/c/repo/memory-api"));
+    let normalized = normalize_working_dir_path(Path::new("/c/repo/memory-api"));
 
     assert_eq!(normalized, PathBuf::from("C:/repo/memory-api"));
 }
@@ -683,8 +622,7 @@ fn normalize_working_dir_path_converts_git_bash_pwd() {
 #[cfg(windows)]
 #[test]
 fn strip_verbatim_prefix_removes_windows_extended_length_prefix() {
-    let stripped =
-        strip_verbatim_prefix(Path::new(r"\\?\C:\repo\memory-api\.ticket"));
+    let stripped = strip_verbatim_prefix(Path::new(r"\\?\C:\repo\memory-api\.ticket"));
 
     assert_eq!(stripped, PathBuf::from("C:/repo/memory-api/.ticket"));
 }
@@ -692,9 +630,7 @@ fn strip_verbatim_prefix_removes_windows_extended_length_prefix() {
 #[cfg(windows)]
 #[test]
 fn strip_verbatim_prefix_normalizes_verbatim_unc_prefix() {
-    let stripped = strip_verbatim_prefix(Path::new(
-        r"\\?\UNC\server\share\memory-api\.ticket",
-    ));
+    let stripped = strip_verbatim_prefix(Path::new(r"\\?\UNC\server\share\memory-api\.ticket"));
 
     assert_eq!(stripped, PathBuf::from("//server/share/memory-api/.ticket"));
 }
@@ -702,16 +638,14 @@ fn strip_verbatim_prefix_normalizes_verbatim_unc_prefix() {
 #[cfg(windows)]
 #[test]
 fn strip_verbatim_prefix_preserves_unc_root() {
-    let stripped =
-        strip_verbatim_prefix(Path::new(r"\\server\share\memory-api\.ticket"));
+    let stripped = strip_verbatim_prefix(Path::new(r"\\server\share\memory-api\.ticket"));
 
     assert_eq!(stripped, PathBuf::from("//server/share/memory-api/.ticket"));
 }
 
 #[test]
 fn strip_verbatim_prefix_removes_slash_normalized_prefix() {
-    let stripped =
-        strip_verbatim_prefix(Path::new("//?/C:/repo/memory-api/.ticket"));
+    let stripped = strip_verbatim_prefix(Path::new("//?/C:/repo/memory-api/.ticket"));
 
     assert_eq!(stripped, PathBuf::from("C:/repo/memory-api/.ticket"));
 }

@@ -2,8 +2,7 @@ use std::{fs, io::ErrorKind, path::Path};
 
 use crate::error::StorageError;
 
-const GITIGNORE_HEADER: &str =
-    "# Excluded local index artifacts created by memory-kernel tools.";
+const GITIGNORE_HEADER: &str = "# Excluded local index artifacts created by memory-kernel tools.";
 
 pub fn ensure_sqlite_index_root(
     index_root: &Path,
@@ -23,10 +22,7 @@ pub fn ensure_sqlite_index_root(
     ensure_gitignore_entries(index_root, &borrowed)
 }
 
-pub fn ensure_gitignore_entries(
-    index_root: &Path,
-    entries: &[&str],
-) -> Result<(), StorageError> {
+pub fn ensure_gitignore_entries(index_root: &Path, entries: &[&str]) -> Result<(), StorageError> {
     let gitignore_path = index_root.join(".gitignore");
     let existing = match fs::read_to_string(&gitignore_path) {
         Ok(content) => content,
@@ -78,8 +74,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let root = dir.path().join(".spec");
 
-        ensure_sqlite_index_root(&root, "entities.db", &["search_index/"])
-            .unwrap();
+        ensure_sqlite_index_root(&root, "entities.db", &["search_index/"]).unwrap();
 
         let gitignore = fs::read_to_string(root.join(".gitignore")).unwrap();
         assert!(
@@ -97,11 +92,9 @@ mod tests {
         let dir = tempdir().unwrap();
         let root = dir.path().join(".rule");
         fs::create_dir_all(&root).unwrap();
-        fs::write(root.join(".gitignore"), "# custom\nsearch_index/\n")
-            .unwrap();
+        fs::write(root.join(".gitignore"), "# custom\nsearch_index/\n").unwrap();
 
-        ensure_gitignore_entries(&root, &["entities.db", "search_index/"])
-            .unwrap();
+        ensure_gitignore_entries(&root, &["entities.db", "search_index/"]).unwrap();
 
         let gitignore = fs::read_to_string(root.join(".gitignore")).unwrap();
         assert!(gitignore.contains("# custom"));

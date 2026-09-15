@@ -1,8 +1,6 @@
 use std::path::Path;
 
-use tracing_subscriber::{
-    EnvFilter, fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _,
-};
+use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
 /// Initialize a shared tracing subscriber for memory-kernel transport binaries.
 ///
@@ -42,8 +40,7 @@ pub fn init_transport_tracing(
             .unwrap_or_else(|| "transport.log".to_string());
 
         let file_appender = tracing_appender::rolling::never(dir, &file_name);
-        let (non_blocking, guard) =
-            tracing_appender::non_blocking(file_appender);
+        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
         std::mem::forget(guard);
 
         let file_layer = fmt::layer()

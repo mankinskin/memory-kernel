@@ -66,32 +66,23 @@ impl EntityTypeSchema {
 
         for (name, def) in &self.fields {
             if def.required && !manifest.extra.contains_key(name) {
-                return Err(SchemaValidationError::MissingRequiredField(
-                    name.clone(),
-                ));
+                return Err(SchemaValidationError::MissingRequiredField(name.clone()));
             }
         }
         Ok(())
     }
 
-    pub fn allows_transition(
-        &self,
-        from: &str,
-        to: &str,
-    ) -> bool {
-        self.transitions.iter().any(|t| {
-            (t.from == from && t.to == to) || (t.from == to && t.to == from)
-        })
+    pub fn allows_transition(&self, from: &str, to: &str) -> bool {
+        self.transitions
+            .iter()
+            .any(|t| (t.from == from && t.to == to) || (t.from == to && t.to == from))
     }
 
     /// States legally reachable from `from` in a single transition.
     ///
     /// Transitions are traversed undirected (matching [`Self::allows_transition`]
     /// and [`Self::find_path`]), so this reports every state adjacent to `from`.
-    pub fn allowed_next_states(
-        &self,
-        from: &str,
-    ) -> Vec<String> {
+    pub fn allowed_next_states(&self, from: &str) -> Vec<String> {
         let mut states = std::collections::BTreeSet::new();
         for t in &self.transitions {
             if t.from == from {
@@ -107,11 +98,7 @@ impl EntityTypeSchema {
     /// Build a recovery-oriented [`SchemaValidationError::InvalidTransition`] for
     /// a rejected `from -> to` transition, populating the allowed next states and
     /// the intermediate path (if any) needed to reach `to`.
-    pub fn invalid_transition_error(
-        &self,
-        from: &str,
-        to: &str,
-    ) -> SchemaValidationError {
+    pub fn invalid_transition_error(&self, from: &str, to: &str) -> SchemaValidationError {
         SchemaValidationError::InvalidTransition {
             from: from.to_owned(),
             to: to.to_owned(),
@@ -120,11 +107,7 @@ impl EntityTypeSchema {
         }
     }
 
-    pub fn ensure_transition(
-        &self,
-        from: &str,
-        to: &str,
-    ) -> Result<(), SchemaValidationError> {
+    pub fn ensure_transition(&self, from: &str, to: &str) -> Result<(), SchemaValidationError> {
         if self.allows_transition(from, to) {
             Ok(())
         } else {
@@ -132,10 +115,7 @@ impl EntityTypeSchema {
         }
     }
 
-    pub fn ensure_edge_kind(
-        &self,
-        kind: &str,
-    ) -> Result<(), SchemaValidationError> {
+    pub fn ensure_edge_kind(&self, kind: &str) -> Result<(), SchemaValidationError> {
         if self.edge_rules.contains_key(kind) {
             Ok(())
         } else {
@@ -151,9 +131,7 @@ impl EntityTypeSchema {
         target: &str,
         history_states: &[String],
     ) -> Result<(), SchemaValidationError> {
-        if self.required_states.is_empty()
-            || !self.terminal_states.contains(&target.to_string())
-        {
+        if self.required_states.is_empty() || !self.terminal_states.contains(&target.to_string()) {
             return Ok(());
         }
         let visited: std::collections::HashSet<&str> =
@@ -177,11 +155,7 @@ impl EntityTypeSchema {
     /// Find the shortest path of intermediate states from `from` to `to` using BFS.
     /// Returns the sequence of states to transition through (excluding `from`, including `to`).
     /// Returns `None` if no path exists.
-    pub fn find_path(
-        &self,
-        from: &str,
-        to: &str,
-    ) -> Option<Vec<String>> {
+    pub fn find_path(&self, from: &str, to: &str) -> Option<Vec<String>> {
         if from == to {
             return Some(vec![]);
         }

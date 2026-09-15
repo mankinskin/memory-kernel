@@ -4,16 +4,16 @@ use std::{
     sync::Mutex,
 };
 
-use rusqlite::{Connection, OpenFlags, OptionalExtension, params};
+use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 use uuid::Uuid;
 
 use crate::{
     error::StorageError,
     model::edge::EdgeRecord,
     storage::schema::{
-        SCHEMA_VERSION, TABLE_BOARD_ACTIVE_INDEX, TABLE_BOARD_CONFIG,
-        TABLE_BOARD_ENTRIES, TABLE_EDGES, TABLE_LEASES, TABLE_META,
-        TABLE_SCAN_ROOTS, TABLE_TICKETS, TABLE_WORKFLOW_FACTS,
+        SCHEMA_VERSION, TABLE_BOARD_ACTIVE_INDEX, TABLE_BOARD_CONFIG, TABLE_BOARD_ENTRIES,
+        TABLE_EDGES, TABLE_LEASES, TABLE_META, TABLE_SCAN_ROOTS, TABLE_TICKETS,
+        TABLE_WORKFLOW_FACTS,
     },
 };
 
@@ -56,10 +56,7 @@ impl RedbIndexStore {
         read_connection(&self.db_path)
     }
 
-    fn with_write<F, R>(
-        &self,
-        f: F,
-    ) -> Result<R, StorageError>
+    fn with_write<F, R>(&self, f: F) -> Result<R, StorageError>
     where
         F: FnOnce(&Connection) -> Result<R, StorageError>,
     {
@@ -69,10 +66,7 @@ impl RedbIndexStore {
     }
 
     /// Used by board operations (which return `BoardError` that impl `From<StorageError>`).
-    pub fn with_db_ext<F, R, E>(
-        &self,
-        f: F,
-    ) -> Result<R, E>
+    pub fn with_db_ext<F, R, E>(&self, f: F) -> Result<R, E>
     where
         F: FnOnce(&Connection) -> Result<R, E>,
         E: From<StorageError>,
@@ -84,12 +78,9 @@ impl RedbIndexStore {
 
     // ── entity CRUD ──────────────────────────────────────────────────────────
 
-    pub fn insert_ticket(
-        &self,
-        entity: &IndexedEntity,
-    ) -> Result<(), StorageError> {
-        let bytes = bincode::serialize(entity)
-            .map_err(|e| StorageError::Serialization(e.to_string()))?;
+    pub fn insert_ticket(&self, entity: &IndexedEntity) -> Result<(), StorageError> {
+        let bytes =
+            bincode::serialize(entity).map_err(|e| StorageError::Serialization(e.to_string()))?;
         let key = entity.id.to_string();
         self.with_write(|conn| {
             conn.execute(
@@ -100,10 +91,7 @@ impl RedbIndexStore {
         })
     }
 
-    pub fn upsert_tickets_batch(
-        &self,
-        entities: &[IndexedEntity],
-    ) -> Result<(), StorageError> {
+    pub fn upsert_tickets_batch(&self, entities: &[IndexedEntity]) -> Result<(), StorageError> {
         if entities.is_empty() {
             return Ok(());
         }
@@ -132,15 +120,10 @@ impl RedbIndexStore {
         })
     }
 
-    pub fn get_ticket(
-        &self,
-        id: &Uuid,
-    ) -> Result<Option<IndexedEntity>, StorageError> {
+    pub fn get_ticket(&self, id: &Uuid) -> Result<Option<IndexedEntity>, StorageError> {
         let key = id.to_string();
         let conn = self.read_conn()?;
-        let mut stmt = conn.prepare(&format!(
-            "SELECT data FROM {TABLE_TICKETS} WHERE id = ?1"
-        ))?;
+        let mut stmt = conn.prepare(&format!("SELECT data FROM {TABLE_TICKETS} WHERE id = ?1"))?;
         let mut rows = stmt.query(params![key])?;
         if let Some(row) = rows.next()? {
             let bytes: Vec<u8> = row.get(0)?;
@@ -154,8 +137,7 @@ impl RedbIndexStore {
 
     pub fn list_tickets(&self) -> Result<Vec<IndexedEntity>, StorageError> {
         let conn = self.read_conn()?;
-        let mut stmt =
-            conn.prepare(&format!("SELECT data FROM {TABLE_TICKETS}"))?;
+        let mut stmt = conn.prepare(&format!("SELECT data FROM {TABLE_TICKETS}"))?;
         let rows = stmt.query_map([], |row| row.get::<_, Vec<u8>>(0))?;
         let mut entities = Vec::new();
         for bytes in rows {
@@ -179,18 +161,14 @@ impl RedbIndexStore {
             .map(|i| format!("?{i}"))
             .collect::<Vec<_>>()
             .join(", ");
-        let sql = format!(
-            "SELECT data FROM {TABLE_TICKETS} WHERE id IN ({placeholders})"
-        );
+        let sql = format!("SELECT data FROM {TABLE_TICKETS} WHERE id IN ({placeholders})");
         let mut stmt = conn.prepare(&sql)?;
-        let id_strs: Vec<String> =
-            ids.iter().map(|id| id.to_string()).collect();
+        let id_strs: Vec<String> = ids.iter().map(|id| id.to_string()).collect();
         let params: Vec<&dyn rusqlite::types::ToSql> = id_strs
             .iter()
             .map(|s| s as &dyn rusqlite::types::ToSql)
             .collect();
-        let rows =
-            stmt.query_map(params.as_slice(), |row| row.get::<_, Vec<u8>>(0))?;
+        let rows = stmt.query_map(params.as_slice(), |row| row.get::<_, Vec<u8>>(0))?;
         let mut map = HashMap::with_capacity(ids.len());
         for bytes in rows {
             let entity: IndexedEntity = bincode::deserialize(&bytes?)
@@ -201,10 +179,7 @@ impl RedbIndexStore {
     }
 
     /// Remove an entity from the index.
-    pub fn remove_ticket(
-        &self,
-        id: &Uuid,
-    ) -> Result<(), StorageError> {
+    pub fn remove_ticket(&self, id: &Uuid) -> Result<(), StorageError> {
         let key = id.to_string();
         self.with_write(|conn| {
             conn.execute(
@@ -215,10 +190,7 @@ impl RedbIndexStore {
         })
     }
 
-    pub fn remove_tickets_batch(
-        &self,
-        ids: &[Uuid],
-    ) -> Result<(), StorageError> {
+    pub fn remove_tickets_batch(&self, ids: &[Uuid]) -> Result<(), StorageError> {
         if ids.is_empty() {
             return Ok(());
         }
@@ -244,8 +216,8 @@ impl RedbIndexStore {
         id: &Uuid,
         facts: &WorkflowFacts,
     ) -> Result<(), StorageError> {
-        let bytes = bincode::serialize(facts)
-            .map_err(|e| StorageError::Serialization(e.to_string()))?;
+        let bytes =
+            bincode::serialize(facts).map_err(|e| StorageError::Serialization(e.to_string()))?;
         let key = id.to_string();
         self.with_write(|conn| {
             conn.execute(
@@ -258,10 +230,7 @@ impl RedbIndexStore {
         })
     }
 
-    pub fn get_workflow_facts(
-        &self,
-        id: &Uuid,
-    ) -> Result<Option<WorkflowFacts>, StorageError> {
+    pub fn get_workflow_facts(&self, id: &Uuid) -> Result<Option<WorkflowFacts>, StorageError> {
         let key = id.to_string();
         let conn = self.read_conn()?;
         let mut stmt = conn.prepare(&format!(
@@ -290,12 +259,10 @@ impl RedbIndexStore {
             .map(|i| format!("?{i}"))
             .collect::<Vec<_>>()
             .join(", ");
-        let sql = format!(
-            "SELECT id, data FROM {TABLE_WORKFLOW_FACTS} WHERE id IN ({placeholders})"
-        );
+        let sql =
+            format!("SELECT id, data FROM {TABLE_WORKFLOW_FACTS} WHERE id IN ({placeholders})");
         let mut stmt = conn.prepare(&sql)?;
-        let id_strs: Vec<String> =
-            ids.iter().map(|id| id.to_string()).collect();
+        let id_strs: Vec<String> = ids.iter().map(|id| id.to_string()).collect();
         let params: Vec<&dyn rusqlite::types::ToSql> = id_strs
             .iter()
             .map(|s| s as &dyn rusqlite::types::ToSql)
@@ -306,9 +273,9 @@ impl RedbIndexStore {
         let mut map = HashMap::with_capacity(ids.len());
         for row in rows {
             let (id_str, bytes) = row?;
-            let id: Uuid = id_str.parse().map_err(|e: uuid::Error| {
-                StorageError::Serialization(e.to_string())
-            })?;
+            let id: Uuid = id_str
+                .parse()
+                .map_err(|e: uuid::Error| StorageError::Serialization(e.to_string()))?;
             let facts: WorkflowFacts = bincode::deserialize(&bytes)
                 .map_err(|e| StorageError::Serialization(e.to_string()))?;
             map.insert(id, facts);
@@ -316,10 +283,7 @@ impl RedbIndexStore {
         Ok(map)
     }
 
-    pub fn remove_workflow_facts(
-        &self,
-        id: &Uuid,
-    ) -> Result<(), StorageError> {
+    pub fn remove_workflow_facts(&self, id: &Uuid) -> Result<(), StorageError> {
         let key = id.to_string();
         self.with_write(|conn| {
             conn.execute(
@@ -340,10 +304,7 @@ impl RedbIndexStore {
     // ── edge CRUD ─────────────────────────────────────────────────────────────
 
     /// Insert an edge. Duplicate insert is idempotent.
-    pub fn insert_edge(
-        &self,
-        edge: &EdgeRecord,
-    ) -> Result<(), StorageError> {
+    pub fn insert_edge(&self, edge: &EdgeRecord) -> Result<(), StorageError> {
         let from = edge.from.to_string();
         let to = edge.to.to_string();
         let created_at = edge.created_at.to_rfc3339();
@@ -359,10 +320,7 @@ impl RedbIndexStore {
         })
     }
 
-    pub fn insert_edges_batch(
-        &self,
-        edges: &[EdgeRecord],
-    ) -> Result<(), StorageError> {
+    pub fn insert_edges_batch(&self, edges: &[EdgeRecord]) -> Result<(), StorageError> {
         if edges.is_empty() {
             return Ok(());
         }
@@ -392,10 +350,7 @@ impl RedbIndexStore {
     }
 
     /// Delete an edge. Missing edges are a no-op.
-    pub fn delete_edge(
-        &self,
-        edge: &EdgeRecord,
-    ) -> Result<(), StorageError> {
+    pub fn delete_edge(&self, edge: &EdgeRecord) -> Result<(), StorageError> {
         let from = edge.from.to_string();
         let to = edge.to.to_string();
         self.with_write(|conn| {
@@ -417,10 +372,7 @@ impl RedbIndexStore {
     }
 
     /// Returns all edges originating from `from`.
-    pub fn edges_from(
-        &self,
-        from: &Uuid,
-    ) -> Result<Vec<EdgeRecord>, StorageError> {
+    pub fn edges_from(&self, from: &Uuid) -> Result<Vec<EdgeRecord>, StorageError> {
         let from_str = from.to_string();
         let conn = self.read_conn()?;
         let mut stmt = conn.prepare(&format!(
@@ -443,10 +395,7 @@ impl RedbIndexStore {
     }
 
     /// Returns all dependency edges pointing to `to`.
-    pub fn edges_to(
-        &self,
-        to: &Uuid,
-    ) -> Result<Vec<EdgeRecord>, StorageError> {
+    pub fn edges_to(&self, to: &Uuid) -> Result<Vec<EdgeRecord>, StorageError> {
         let to_str = to.to_string();
         let conn = self.read_conn()?;
         let mut stmt = conn.prepare(&format!(
@@ -620,9 +569,7 @@ fn check_or_set_schema_version(conn: &Connection) -> Result<(), StorageError> {
     use crate::storage::schema::ensure_supported_schema_version;
     let existing: Option<String> = conn
         .query_row(
-            &format!(
-                "SELECT value FROM {TABLE_META} WHERE key = 'schema_version'"
-            ),
+            &format!("SELECT value FROM {TABLE_META} WHERE key = 'schema_version'"),
             [],
             |row| row.get(0),
         )
@@ -632,13 +579,11 @@ fn check_or_set_schema_version(conn: &Connection) -> Result<(), StorageError> {
         Some(found) => ensure_supported_schema_version(&found)?,
         None => {
             conn.execute(
-                &format!(
-                    "INSERT INTO {TABLE_META} (key, value) VALUES ('schema_version', ?1)"
-                ),
+                &format!("INSERT INTO {TABLE_META} (key, value) VALUES ('schema_version', ?1)"),
                 params![SCHEMA_VERSION],
             )
             .map_err(|e| StorageError::Database(e.to_string()))?;
-        },
+        }
     }
     Ok(())
 }

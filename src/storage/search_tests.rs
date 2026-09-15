@@ -5,9 +5,9 @@ use super::*;
 #[test]
 fn rebuilds_search_index_for_tantivy_thread_panic_messages() {
     let error = StorageError::SearchIndex(
-            "storage error: search index error: An error occurred in a thread: 'Any { .. }'"
-                .to_string(),
-        );
+        "storage error: search index error: An error occurred in a thread: 'Any { .. }'"
+            .to_string(),
+    );
 
     assert!(TantivySearchIndex::should_rebuild_search_index(&error));
 }

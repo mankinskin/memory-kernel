@@ -22,8 +22,7 @@ pub fn format_manifest_toml(manifest: &EntityManifest) -> String {
 
     // Identity fields — always present, always first.
     writeln!(out, "id = \"{}\"", manifest.id).unwrap();
-    writeln!(out, "created_at = \"{}\"", manifest.created_at.to_rfc3339())
-        .unwrap();
+    writeln!(out, "created_at = \"{}\"", manifest.created_at.to_rfc3339()).unwrap();
 
     // Priority extra fields in canonical order.
     let priority_extras = &CANONICAL_FIELD_ORDER[2..];
@@ -34,8 +33,7 @@ pub fn format_manifest_toml(manifest: &EntityManifest) -> String {
     }
 
     // Remaining extra fields in alphabetical order.
-    let priority_set: std::collections::HashSet<&str> =
-        priority_extras.iter().copied().collect();
+    let priority_set: std::collections::HashSet<&str> = priority_extras.iter().copied().collect();
     for (key, value) in &manifest.extra {
         if !priority_set.contains(key.as_str()) {
             write_toml_kv(&mut out, key, value);
@@ -56,8 +54,7 @@ pub fn is_canonically_ordered(toml_text: &str) -> bool {
 /// Given the set of keys present in a manifest, compute the ordering that
 /// [`format_manifest_toml`] would produce.
 pub fn canonical_order_for_keys(keys: &[String]) -> Vec<String> {
-    let key_set: std::collections::HashSet<&str> =
-        keys.iter().map(|s| s.as_str()).collect();
+    let key_set: std::collections::HashSet<&str> = keys.iter().map(|s| s.as_str()).collect();
     let mut result: Vec<String> = Vec::with_capacity(keys.len());
 
     for &canonical in CANONICAL_FIELD_ORDER {
@@ -118,38 +115,31 @@ fn extract_key_order(toml_text: &str) -> Vec<String> {
 
 // ── value serialization ───────────────────────────────────────────────────────
 
-fn write_toml_kv(
-    out: &mut String,
-    key: &str,
-    value: &Value,
-) {
+fn write_toml_kv(out: &mut String, key: &str, value: &Value) {
     match value {
         Value::String(s) => {
             writeln!(out, "{key} = \"{}\"", escape_toml_basic(s)).unwrap();
-        },
+        }
         Value::Number(n) => {
             writeln!(out, "{key} = {n}").unwrap();
-        },
+        }
         Value::Bool(b) => {
             writeln!(out, "{key} = {b}").unwrap();
-        },
+        }
         Value::Array(arr) => {
-            let items: Vec<String> =
-                arr.iter().filter_map(inline_toml_value).collect();
+            let items: Vec<String> = arr.iter().filter_map(inline_toml_value).collect();
             writeln!(out, "{key} = [{}]", items.join(", ")).unwrap();
-        },
+        }
         Value::Object(map) => {
             let pairs: Vec<String> = map
                 .iter()
-                .filter_map(|(k, v)| {
-                    inline_toml_value(v).map(|s| format!("{k} = {s}"))
-                })
+                .filter_map(|(k, v)| inline_toml_value(v).map(|s| format!("{k} = {s}")))
                 .collect();
             writeln!(out, "{key} = {{ {} }}", pairs.join(", ")).unwrap();
-        },
+        }
         Value::Null => {
             writeln!(out, "{key} = \"\"").unwrap();
-        },
+        }
     }
 }
 
@@ -161,19 +151,16 @@ fn inline_toml_value(v: &Value) -> Option<String> {
         Value::Number(n) => Some(n.to_string()),
         Value::Bool(b) => Some(b.to_string()),
         Value::Array(arr) => {
-            let items: Vec<String> =
-                arr.iter().filter_map(inline_toml_value).collect();
+            let items: Vec<String> = arr.iter().filter_map(inline_toml_value).collect();
             Some(format!("[{}]", items.join(", ")))
-        },
+        }
         Value::Object(map) => {
             let pairs: Vec<String> = map
                 .iter()
-                .filter_map(|(k, v)| {
-                    inline_toml_value(v).map(|s| format!("{k} = {s}"))
-                })
+                .filter_map(|(k, v)| inline_toml_value(v).map(|s| format!("{k} = {s}")))
                 .collect();
             Some(format!("{{ {} }}", pairs.join(", ")))
-        },
+        }
         Value::Null => None,
     }
 }

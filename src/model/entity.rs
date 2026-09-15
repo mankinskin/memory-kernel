@@ -16,10 +16,7 @@ pub struct EntityManifest {
 }
 
 impl EntityManifest {
-    pub fn new(
-        id: EntityId,
-        created_at: DateTime<Utc>,
-    ) -> Self {
+    pub fn new(id: EntityId, created_at: DateTime<Utc>) -> Self {
         Self {
             id,
             created_at,

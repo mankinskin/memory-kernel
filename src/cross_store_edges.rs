@@ -36,23 +36,19 @@ impl CrossStoreEdgeClassifier {
         policy: WorkspacePolicy,
     ) -> Option<Self> {
         let layout = StoreLayout::for_kind(kind)?;
-        let active_store_root =
-            resolve_store_root_from(active_store_root, layout.store_dir);
-        let active_workspace_root = resolve_workspace_root_from_store_root(
-            &active_store_root,
-            layout.store_dir,
-        );
+        let active_store_root = resolve_store_root_from(active_store_root, layout.store_dir);
+        let active_workspace_root =
+            resolve_workspace_root_from_store_root(&active_store_root, layout.store_dir);
 
-        let mut included_store_roots =
-            discover_workspace_scan_roots_with_policy(
-                &active_workspace_root,
-                layout.store_dir,
-                layout.entity_dir,
-                &policy,
-            )
-            .into_iter()
-            .map(|root| resolve_store_root_from(&root.path, layout.store_dir))
-            .collect::<Vec<_>>();
+        let mut included_store_roots = discover_workspace_scan_roots_with_policy(
+            &active_workspace_root,
+            layout.store_dir,
+            layout.entity_dir,
+            &policy,
+        )
+        .into_iter()
+        .map(|root| resolve_store_root_from(&root.path, layout.store_dir))
+        .collect::<Vec<_>>();
         if !included_store_roots.contains(&active_store_root) {
             included_store_roots.push(active_store_root.clone());
         }
@@ -64,18 +60,14 @@ impl CrossStoreEdgeClassifier {
             discover_stores(&active_workspace_root)
                 .into_iter()
                 .filter(|store| store.kind == kind)
-                .map(|store| {
-                    resolve_store_root_from(&store.store_root, layout.store_dir)
-                }),
+                .map(|store| resolve_store_root_from(&store.store_root, layout.store_dir)),
         );
 
         for ancestor in active_workspace_root.ancestors().skip(1) {
             let candidate = ancestor.join(layout.store_dir);
             if candidate.is_dir() {
-                discoverable_store_roots.push(resolve_store_root_from(
-                    &candidate,
-                    layout.store_dir,
-                ));
+                discoverable_store_roots
+                    .push(resolve_store_root_from(&candidate, layout.store_dir));
             }
         }
 
@@ -89,10 +81,7 @@ impl CrossStoreEdgeClassifier {
         })
     }
 
-    pub fn classify(
-        &self,
-        target_id: Uuid,
-    ) -> EdgeReferenceResolution {
+    pub fn classify(&self, target_id: Uuid) -> EdgeReferenceResolution {
         if self
             .included_store_roots
             .iter()
@@ -123,10 +112,7 @@ pub fn short_id8(id: Uuid) -> String {
     id.to_string()[..8].to_string()
 }
 
-pub fn cross_workspace_edge_message(
-    target_id: Uuid,
-    target_workspace_root: &Path,
-) -> String {
+pub fn cross_workspace_edge_message(target_id: Uuid, target_workspace_root: &Path) -> String {
     format!(
         "depends_on edge points to {} in workspace '{}' which is outside the active workspace policy scope.",
         short_id8(target_id),
@@ -172,11 +158,7 @@ impl StoreLayout {
     }
 }
 
-fn entity_exists(
-    store_root: &Path,
-    layout: StoreLayout,
-    id: Uuid,
-) -> bool {
+fn entity_exists(store_root: &Path, layout: StoreLayout, id: Uuid) -> bool {
     store_root
         .join(layout.entity_dir)
         .join(id.to_string())
@@ -194,19 +176,14 @@ mod tests {
 
     use super::*;
 
-    fn write_entity(
-        workspace_root: &Path,
-        kind: ContentKind,
-        id: Uuid,
-    ) {
+    fn write_entity(workspace_root: &Path, kind: ContentKind, id: Uuid) {
         let layout = StoreLayout::for_kind(kind).unwrap();
         let path = workspace_root
             .join(layout.store_dir)
             .join(layout.entity_dir)
             .join(id.to_string());
         fs::create_dir_all(&path).unwrap();
-        fs::write(path.join(layout.manifest_file), "id = \"placeholder\"\n")
-            .unwrap();
+        fs::write(path.join(layout.manifest_file), "id = \"placeholder\"\n").unwrap();
     }
 
     #[test]
@@ -306,12 +283,9 @@ mod tests {
             policy.clone(),
         )
         .unwrap();
-        let spec = CrossStoreEdgeClassifier::for_store(
-            &child.join(".spec"),
-            ContentKind::Spec,
-            policy,
-        )
-        .unwrap();
+        let spec =
+            CrossStoreEdgeClassifier::for_store(&child.join(".spec"), ContentKind::Spec, policy)
+                .unwrap();
 
         assert!(matches!(
             ticket.classify(ticket_id),

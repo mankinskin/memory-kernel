@@ -1,21 +1,18 @@
 use chrono::Utc;
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::{params, Connection, OptionalExtension};
 use uuid::Uuid;
 
 use crate::{
     error::StorageError,
     storage::{
         index::RedbIndexStore,
-        schema::{
-            TABLE_BOARD_ACTIVE_INDEX, TABLE_BOARD_CONFIG, TABLE_BOARD_ENTRIES,
-        },
+        schema::{TABLE_BOARD_ACTIVE_INDEX, TABLE_BOARD_CONFIG, TABLE_BOARD_ENTRIES},
     },
 };
 
 use super::{
-    BOARD_CONFIG_KEY, BoardConfig, BoardEntry, BoardEntryStatus, BoardError,
-    db_err, deserialize_config, deserialize_entry, serialize_config,
-    serialize_entry,
+    db_err, deserialize_config, deserialize_entry, serialize_config, serialize_entry, BoardConfig,
+    BoardEntry, BoardEntryStatus, BoardError, BOARD_CONFIG_KEY,
 };
 
 impl RedbIndexStore {
@@ -42,10 +39,7 @@ impl RedbIndexStore {
         })
     }
 
-    pub fn board_upsert_entries_atomic(
-        &self,
-        entries: &[BoardEntry],
-    ) -> Result<(), BoardError> {
+    pub fn board_upsert_entries_atomic(&self, entries: &[BoardEntry]) -> Result<(), BoardError> {
         self.with_db_ext(|conn| {
             conn.execute_batch("BEGIN IMMEDIATE;").map_err(db_err)?;
             for entry in entries {
@@ -82,10 +76,7 @@ impl RedbIndexStore {
         })
     }
 
-    pub fn board_delete_entries_atomic(
-        &self,
-        entry_ids: &[Uuid],
-    ) -> Result<(), BoardError> {
+    pub fn board_delete_entries_atomic(&self, entry_ids: &[Uuid]) -> Result<(), BoardError> {
         self.with_db_ext(|conn| {
             conn.execute_batch("BEGIN IMMEDIATE;").map_err(db_err)?;
             for entry_id in entry_ids {
@@ -128,9 +119,7 @@ impl RedbIndexStore {
         self.with_db_ext(|conn| {
             let bytes: Option<Vec<u8>> = conn
                 .query_row(
-                    &format!(
-                        "SELECT data FROM {TABLE_BOARD_CONFIG} WHERE key = ?1"
-                    ),
+                    &format!("SELECT data FROM {TABLE_BOARD_CONFIG} WHERE key = ?1"),
                     params![BOARD_CONFIG_KEY],
                     |row| row.get(0),
                 )
@@ -143,16 +132,11 @@ impl RedbIndexStore {
         })
     }
 
-    pub fn board_write_config(
-        &self,
-        config: &BoardConfig,
-    ) -> Result<(), BoardError> {
+    pub fn board_write_config(&self, config: &BoardConfig) -> Result<(), BoardError> {
         let bytes = serialize_config(config)?;
         self.with_db_ext(|conn| {
             conn.execute(
-                &format!(
-                    "INSERT OR REPLACE INTO {TABLE_BOARD_CONFIG} (key, data) VALUES (?1, ?2)"
-                ),
+                &format!("INSERT OR REPLACE INTO {TABLE_BOARD_CONFIG} (key, data) VALUES (?1, ?2)"),
                 params![BOARD_CONFIG_KEY, bytes],
             )
             .map_err(db_err)?;
@@ -354,9 +338,7 @@ impl RedbIndexStore {
 
             let updated_bytes = serialize_entry(&entry)?;
             conn.execute(
-                &format!(
-                    "INSERT OR REPLACE INTO {TABLE_BOARD_ENTRIES} (id, data) VALUES (?1, ?2)"
-                ),
+                &format!("INSERT OR REPLACE INTO {TABLE_BOARD_ENTRIES} (id, data) VALUES (?1, ?2)"),
                 params![entry_id.to_string(), updated_bytes],
             )
             .map_err(db_err)?;
@@ -371,10 +353,7 @@ impl RedbIndexStore {
         })
     }
 
-    pub fn board_refresh_heartbeat(
-        &self,
-        entry_id: &Uuid,
-    ) -> Result<BoardEntry, BoardError> {
+    pub fn board_refresh_heartbeat(&self, entry_id: &Uuid) -> Result<BoardEntry, BoardError> {
         self.with_db_ext(|conn| {
             conn.execute_batch("BEGIN IMMEDIATE;").map_err(db_err)?;
             let entry_key = entry_id.to_string();
@@ -398,9 +377,7 @@ impl RedbIndexStore {
             entry.last_heartbeat = Utc::now();
             let updated_bytes = serialize_entry(&entry)?;
             conn.execute(
-                &format!(
-                    "INSERT OR REPLACE INTO {TABLE_BOARD_ENTRIES} (id, data) VALUES (?1, ?2)"
-                ),
+                &format!("INSERT OR REPLACE INTO {TABLE_BOARD_ENTRIES} (id, data) VALUES (?1, ?2)"),
                 params![entry_id.to_string(), updated_bytes],
             )
             .map_err(db_err)?;
@@ -438,18 +415,16 @@ fn lookup_active_entry_id(
 ) -> Result<Uuid, BoardError> {
     match conn
         .query_row(
-            &format!(
-                "SELECT value FROM {TABLE_BOARD_ACTIVE_INDEX} WHERE key = ?1"
-            ),
+            &format!("SELECT value FROM {TABLE_BOARD_ACTIVE_INDEX} WHERE key = ?1"),
             params![index_key],
             |row| row.get::<_, String>(0),
         )
         .optional()
         .map_err(db_err)?
     {
-        Some(value) => value.parse::<Uuid>().map_err(|error| {
-            BoardError::Storage(StorageError::Serialization(error.to_string()))
-        }),
+        Some(value) => value
+            .parse::<Uuid>()
+            .map_err(|error| BoardError::Storage(StorageError::Serialization(error.to_string()))),
         None => Err(BoardError::NotCheckedIn {
             ticket_id,
             agent_id: agent_id.to_string(),

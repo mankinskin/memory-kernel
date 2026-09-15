@@ -9,10 +9,7 @@ pub enum SchemaValidationError {
         "state '{state}' is not allowed by the schema; allowed states are [{allowed}]",
         allowed = .allowed.join(", "),
     )]
-    OffSchemaState {
-        state: String,
-        allowed: Vec<String>,
-    },
+    OffSchemaState { state: String, allowed: Vec<String> },
     /// A rejected state transition, enriched with recovery guidance: the current
     /// state, the states legally reachable in a single hop, and (when the target
     /// is reachable at all) the intermediate states that must be traversed.
@@ -44,10 +41,7 @@ pub enum SchemaValidationError {
 /// When `intermediate` names a reachable multi-hop path, this lists the required
 /// waypoints (excluding the target itself). When it is empty the target is
 /// unreachable and this states so.
-fn transition_path_hint(
-    intermediate: &[String],
-    to: &str,
-) -> String {
+fn transition_path_hint(intermediate: &[String], to: &str) -> String {
     match intermediate.split_last() {
         Some((_target, waypoints)) if !waypoints.is_empty() => format!(
             "to reach '{to}', first transition through: {}",
@@ -152,9 +146,7 @@ pub enum ProtocolError {
         "validate.assignment_mismatch: validator_id does not match the assigned validator for this ticket"
     )]
     ValidateAssignmentMismatch,
-    #[error(
-        "validate.missing_evidence: evidence_refs must contain at least one entry"
-    )]
+    #[error("validate.missing_evidence: evidence_refs must contain at least one entry")]
     ValidateMissingEvidence,
     // ── release errors ────────────────────────────────────────────────────────
     #[error(
@@ -165,19 +157,13 @@ pub enum ProtocolError {
         actual: String,
         expected: String,
     },
-    #[error(
-        "release.validation_not_passed: ticket {ticket} has validation_status '{status}'"
-    )]
+    #[error("release.validation_not_passed: ticket {ticket} has validation_status '{status}'")]
     ReleaseValidationNotPassed { ticket: Uuid, status: String },
-    #[error(
-        "release.assignment_chain_missing: assignment_chain must not be empty"
-    )]
+    #[error("release.assignment_chain_missing: assignment_chain must not be empty")]
     ReleaseAssignmentChainMissing,
     #[error("release.gates_not_satisfied: {0}")]
     ReleaseGatesNotSatisfied(String),
-    #[error(
-        "release.merge_metadata_missing: merge_commit is required for promote"
-    )]
+    #[error("release.merge_metadata_missing: merge_commit is required for promote")]
     ReleaseMergeMetadataMissing,
     #[error("release.target_not_found: no tickets found for target '{0}'")]
     ReleaseTargetNotFound(String),
@@ -189,39 +175,17 @@ pub enum ProtocolError {
 impl ProtocolError {
     pub fn code(&self) -> &'static str {
         match self {
-            ProtocolError::ValidateInvalidState { .. } => {
-                "validate.invalid_state"
-            },
-            ProtocolError::ValidateSameIdentity { .. } => {
-                "validate.same_identity"
-            },
-            ProtocolError::ValidateAssignmentMismatch => {
-                "validate.assignment_mismatch"
-            },
-            ProtocolError::ValidateMissingEvidence => {
-                "validate.missing_evidence"
-            },
-            ProtocolError::ReleaseInvalidState { .. } => {
-                "release.invalid_state"
-            },
-            ProtocolError::ReleaseValidationNotPassed { .. } => {
-                "release.validation_not_passed"
-            },
-            ProtocolError::ReleaseAssignmentChainMissing => {
-                "release.assignment_chain_missing"
-            },
-            ProtocolError::ReleaseGatesNotSatisfied(_) => {
-                "release.gates_not_satisfied"
-            },
-            ProtocolError::ReleaseMergeMetadataMissing => {
-                "release.merge_metadata_missing"
-            },
-            ProtocolError::ReleaseTargetNotFound(_) => {
-                "release.target_not_found"
-            },
-            ProtocolError::ReleaseTicketStateInvalid(_) => {
-                "release.ticket_state_invalid"
-            },
+            ProtocolError::ValidateInvalidState { .. } => "validate.invalid_state",
+            ProtocolError::ValidateSameIdentity { .. } => "validate.same_identity",
+            ProtocolError::ValidateAssignmentMismatch => "validate.assignment_mismatch",
+            ProtocolError::ValidateMissingEvidence => "validate.missing_evidence",
+            ProtocolError::ReleaseInvalidState { .. } => "release.invalid_state",
+            ProtocolError::ReleaseValidationNotPassed { .. } => "release.validation_not_passed",
+            ProtocolError::ReleaseAssignmentChainMissing => "release.assignment_chain_missing",
+            ProtocolError::ReleaseGatesNotSatisfied(_) => "release.gates_not_satisfied",
+            ProtocolError::ReleaseMergeMetadataMissing => "release.merge_metadata_missing",
+            ProtocolError::ReleaseTargetNotFound(_) => "release.target_not_found",
+            ProtocolError::ReleaseTicketStateInvalid(_) => "release.ticket_state_invalid",
         }
     }
 }

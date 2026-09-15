@@ -73,10 +73,8 @@ pub fn plan_move<D: MoveDomain + ?Sized>(
     let source_store_root = domain.source_store_root();
     let source_workspace_root =
         crate::workspace::resolve_workspace_root_from_store_root(&source_store_root, &index_dir);
-    let target_store_root = crate::workspace::resolve_store_root_at_fixed_workspace(
-        target_workspace_root,
-        &index_dir,
-    );
+    let target_store_root =
+        crate::workspace::resolve_store_root_at_fixed_workspace(target_workspace_root, &index_dir);
 
     let subdir = domain.entity_subdir().to_string();
     let source_entity_path = domain.source_entity_path(entity_id)?;
@@ -209,10 +207,8 @@ pub fn plan_move_set<D: MoveDomain + ?Sized>(
     let source_store_root = domain.source_store_root();
     let source_workspace_root =
         crate::workspace::resolve_workspace_root_from_store_root(&source_store_root, &index_dir);
-    let target_store_root = crate::workspace::resolve_store_root_at_fixed_workspace(
-        target_workspace_root,
-        &index_dir,
-    );
+    let target_store_root =
+        crate::workspace::resolve_store_root_at_fixed_workspace(target_workspace_root, &index_dir);
 
     let source_git_root = git_toplevel(&source_workspace_root).map_err(MoveError::Domain)?;
     let mut shared_blockers = Vec::new();
@@ -454,7 +450,16 @@ pub fn resume_move<D: MoveDomain + ?Sized>(
         domain.store_index_dir(),
     );
     let plan = plan_move(domain, &journal.entity_id, &target_workspace_root)?;
-    execute_or_resume(domain, &plan, Some(journal), None, true, false, false, false)
+    execute_or_resume(
+        domain,
+        &plan,
+        Some(journal),
+        None,
+        true,
+        false,
+        false,
+        false,
+    )
 }
 
 /// Roll back a move identified by its journal id.
@@ -905,10 +910,8 @@ fn execute_move_set_journal<D: MoveDomain + ?Sized>(
     persist_move_set_journal(&journal.source_store_root, journal)?;
 
     let mut entity_outcomes = Vec::with_capacity(journal.entity_plans.len());
-    let mut migrated_board_entries_by_entity = domain.migrate_board_history_for_set(
-        &journal.target_store_root,
-        &journal.entity_ids,
-    )?;
+    let mut migrated_board_entries_by_entity =
+        domain.migrate_board_history_for_set(&journal.target_store_root, &journal.entity_ids)?;
     for plan in &journal.entity_plans {
         if journal.completed_entity_ids.contains(&plan.entity_id) {
             let entity_journal_id = journal.entity_journal_ids[&plan.entity_id];
@@ -1368,20 +1371,16 @@ mod move_set_tests {
                 .is_some(),
             "entity_a must be restored to the source store after rollback"
         );
-        assert!(
-            !target_store_root
-                .join("entities")
-                .join(entity_a.to_string())
-                .exists()
-        );
+        assert!(!target_store_root
+            .join("entities")
+            .join(entity_a.to_string())
+            .exists());
 
         // entity_b remains moved (untouched by entity_a's rollback).
-        assert!(
-            target_store_root
-                .join("entities")
-                .join(entity_b.to_string())
-                .exists()
-        );
+        assert!(target_store_root
+            .join("entities")
+            .join(entity_b.to_string())
+            .exists());
     }
 
     #[test]
@@ -1421,12 +1420,10 @@ mod move_set_tests {
         domain.fail_scan_number.set(None);
         let resumed = resume_move_set(&domain, journal_id).expect("resume only unfinished entity");
         assert_eq!(resumed.entity_outcomes.len(), 2);
-        assert!(
-            resumed
-                .entity_outcomes
-                .iter()
-                .any(|outcome| { outcome.journal.entity_id == entity_a && outcome.resumed })
-        );
+        assert!(resumed
+            .entity_outcomes
+            .iter()
+            .any(|outcome| { outcome.journal.entity_id == entity_a && outcome.resumed }));
         let completed = load_move_set_journal(&domain.source_store_root, journal_id)
             .expect("completed set journal");
         assert_eq!(completed.completed_entity_ids, set_plan.entity_ids);

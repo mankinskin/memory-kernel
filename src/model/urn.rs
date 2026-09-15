@@ -113,10 +113,7 @@ impl Urn {
 }
 
 impl fmt::Display for Urn {
-    fn fmt(
-        &self,
-        f: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{URN_SCHEME}://{}/{}/{}",
@@ -136,10 +133,7 @@ impl FromStr for Urn {
 }
 
 impl Serialize for Urn {
-    fn serialize<S>(
-        &self,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
@@ -203,16 +197,10 @@ pub trait UrnResolver {
 
     /// Resolve a single URN to its entity, or `None` when the target store or
     /// entity is not present in this resolver's view.
-    fn resolve(
-        &self,
-        urn: &Urn,
-    ) -> Result<Option<Self::Entity>, UrnError>;
+    fn resolve(&self, urn: &Urn) -> Result<Option<Self::Entity>, UrnError>;
 
     /// Resolve many URNs, preserving input order.
-    fn resolve_all(
-        &self,
-        urns: &[Urn],
-    ) -> Result<Vec<Option<Self::Entity>>, UrnError> {
+    fn resolve_all(&self, urns: &[Urn]) -> Result<Vec<Option<Self::Entity>>, UrnError> {
         urns.iter().map(|u| self.resolve(u)).collect()
     }
 }
@@ -307,8 +295,7 @@ mod tests {
 
     #[test]
     fn serde_roundtrip() {
-        let urn =
-            Urn::new("default", ContentKind::Spec, Uuid::new_v4()).unwrap();
+        let urn = Urn::new("default", ContentKind::Spec, Uuid::new_v4()).unwrap();
         let json = serde_json::to_string(&urn).unwrap();
         let back: Urn = serde_json::from_str(&json).unwrap();
         assert_eq!(urn, back);

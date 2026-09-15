@@ -1,9 +1,6 @@
 use super::*;
 
-pub(super) fn schemas_match(
-    a: &Schema,
-    b: &Schema,
-) -> bool {
+pub(super) fn schemas_match(a: &Schema, b: &Schema) -> bool {
     match (serde_json::to_string(a), serde_json::to_string(b)) {
         (Ok(left), Ok(right)) => left == right,
         _ => false,
@@ -16,10 +13,8 @@ pub(super) fn build_schema() -> (Schema, SearchFields) {
     let title = builder.add_text_field("title", TEXT | STORED);
     let body = builder.add_text_field("body", TEXT | STORED);
     let state = builder.add_text_field("state", STRING | STORED | FAST);
-    let ticket_type =
-        builder.add_text_field("ticket_type", STRING | STORED | FAST);
-    let created_at =
-        builder.add_text_field("created_at", STRING | STORED | FAST);
+    let ticket_type = builder.add_text_field("ticket_type", STRING | STORED | FAST);
+    let created_at = builder.add_text_field("created_at", STRING | STORED | FAST);
     let effort = builder.add_i64_field("effort", INDEXED | STORED | FAST);
     let schema = builder.build();
     (
@@ -36,11 +31,7 @@ pub(super) fn build_schema() -> (Schema, SearchFields) {
     )
 }
 
-pub(super) fn get_text(
-    doc: &TantivyDocument,
-    field: Field,
-    _schema: &Schema,
-) -> Option<String> {
+pub(super) fn get_text(doc: &TantivyDocument, field: Field, _schema: &Schema) -> Option<String> {
     doc.get_first(field)
         .and_then(|v| TantivyValue::as_str(&v))
         .map(str::to_string)
@@ -54,9 +45,7 @@ pub(super) fn expr_to_query(
     match expr {
         Expr::Fts(text) => full_text_query(text, fields, index),
         Expr::Field { key, value } => field_expr_to_query(key, value, fields),
-        Expr::Compare { key, op, value } => {
-            compare_expr_to_query(key, *op, value, fields)
-        },
+        Expr::Compare { key, op, value } => compare_expr_to_query(key, *op, value, fields),
         Expr::And(exprs) => and_expr_to_query(exprs, fields, index),
         Expr::Or(exprs) => or_expr_to_query(exprs, fields, index),
         Expr::Not(expr) => not_expr_to_query(expr, fields, index),
@@ -103,17 +92,14 @@ pub(super) fn compare_expr_to_query(
 
     match (op, value) {
         (CompareOp::Contains, ValueExpr::Text(text)) => {
-            substring_query_for_fields(text, &[field])
-                .unwrap_or_else(|| Box::new(AllQuery))
-        },
+            substring_query_for_fields(text, &[field]).unwrap_or_else(|| Box::new(AllQuery))
+        }
         (CompareOp::Exists, _) => exists_query(field),
         (CompareOp::Gt, _)
         | (CompareOp::Gte, _)
         | (CompareOp::Lt, _)
         | (CompareOp::Lte, _)
-        | (CompareOp::Range, _) => {
-            build_range_query(field, field_name, fields, op, value)
-        },
+        | (CompareOp::Range, _) => build_range_query(field, field_name, fields, op, value),
         _ => Box::new(AllQuery),
     }
 }
@@ -157,7 +143,7 @@ pub(super) fn build_range_query(
                 &Bound::Excluded(term),
                 &Bound::Unbounded,
             ))
-        },
+        }
         (CompareOp::Gte, ValueExpr::Text(text)) => {
             let Some(term) = get_term(text) else {
                 return Box::new(EmptyQuery);
@@ -168,7 +154,7 @@ pub(super) fn build_range_query(
                 &Bound::Included(term),
                 &Bound::Unbounded,
             ))
-        },
+        }
         (CompareOp::Lt, ValueExpr::Text(text)) => {
             let Some(term) = get_term(text) else {
                 return Box::new(EmptyQuery);
@@ -179,7 +165,7 @@ pub(super) fn build_range_query(
                 &Bound::Unbounded,
                 &Bound::Excluded(term),
             ))
-        },
+        }
         (CompareOp::Lte, ValueExpr::Text(text)) => {
             let Some(term) = get_term(text) else {
                 return Box::new(EmptyQuery);
@@ -190,7 +176,7 @@ pub(super) fn build_range_query(
                 &Bound::Unbounded,
                 &Bound::Included(term),
             ))
-        },
+        }
         (CompareOp::Range, ValueExpr::Range { start, end }) => {
             let Some(start_term) = get_term(start) else {
                 return Box::new(EmptyQuery);
@@ -204,7 +190,7 @@ pub(super) fn build_range_query(
                 &Bound::Included(start_term),
                 &Bound::Included(end_term),
             ))
-        },
+        }
         _ => Box::new(EmptyQuery),
     }
 }
@@ -231,24 +217,17 @@ pub(super) fn full_text_query(
 ) -> Box<dyn tantivy::query::Query> {
     use tantivy::query::{AllQuery, BooleanQuery, Occur};
 
-    let mut query_parser = tantivy::query::QueryParser::for_index(
-        index,
-        vec![fields.title, fields.body],
-    );
+    let mut query_parser =
+        tantivy::query::QueryParser::for_index(index, vec![fields.title, fields.body]);
     query_parser.set_conjunction_by_default();
     let exact_query = query_parser.parse_query(text).ok();
-    let substring_query = substring_query_for_fields(
-        text,
-        &[fields.title, fields.body, fields.id],
-    );
+    let substring_query = substring_query_for_fields(text, &[fields.title, fields.body, fields.id]);
 
     match (exact_query, substring_query) {
-        (Some(exact_query), Some(substring_query)) => {
-            Box::new(BooleanQuery::new(vec![
-                (Occur::Should, exact_query),
-                (Occur::Should, substring_query),
-            ]))
-        },
+        (Some(exact_query), Some(substring_query)) => Box::new(BooleanQuery::new(vec![
+            (Occur::Should, exact_query),
+            (Occur::Should, substring_query),
+        ])),
         (Some(exact_query), None) => exact_query,
         (None, Some(substring_query)) => substring_query,
         (None, None) => Box::new(AllQuery),
@@ -288,10 +267,7 @@ pub(super) fn substring_query_for_fields(
     }
 }
 
-pub(super) fn id_field_query(
-    text: &str,
-    fields: &SearchFields,
-) -> Box<dyn tantivy::query::Query> {
+pub(super) fn id_field_query(text: &str, fields: &SearchFields) -> Box<dyn tantivy::query::Query> {
     use tantivy::query::{BooleanQuery, Occur};
 
     let exact_query = term_query(fields.id, text);
@@ -332,9 +308,7 @@ pub(super) fn field_expr_to_query(
     };
 
     match value {
-        ValueExpr::Text(text) if key == "title" => {
-            title_field_query(text, fields)
-        },
+        ValueExpr::Text(text) if key == "title" => title_field_query(text, fields),
         ValueExpr::Text(text) if key == "id" => id_field_query(text, fields),
         ValueExpr::Text(text) => term_query(field, text),
         ValueExpr::Range { .. } => {
@@ -349,15 +323,12 @@ pub(super) fn field_expr_to_query(
             } else {
                 Box::new(AllQuery)
             }
-        },
+        }
         ValueExpr::Empty => Box::new(AllQuery),
     }
 }
 
-pub(super) fn search_field_for_key(
-    key: &str,
-    fields: &SearchFields,
-) -> Option<Field> {
+pub(super) fn search_field_for_key(key: &str, fields: &SearchFields) -> Option<Field> {
     match key {
         "state" | "status" => Some(fields.state),
         "type" | "ticket_type" => Some(fields.ticket_type),
@@ -369,10 +340,7 @@ pub(super) fn search_field_for_key(
     }
 }
 
-pub(super) fn term_query(
-    field: Field,
-    text: &str,
-) -> Box<dyn tantivy::query::Query> {
+pub(super) fn term_query(field: Field, text: &str) -> Box<dyn tantivy::query::Query> {
     use tantivy::query::TermQuery;
 
     let term = Term::from_field_text(field, text);

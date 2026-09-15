@@ -51,16 +51,12 @@ pub fn generate_ticket_sidecar(input: TicketIndexInput<'_>) -> IndexSidecar {
         e.seal();
     }
 
-    let mut sidecar =
-        IndexSidecar::new(ContentKind::Ticket, input.store_dir, entries);
+    let mut sidecar = IndexSidecar::new(ContentKind::Ticket, input.store_dir, entries);
     sidecar.sort();
     sidecar
 }
 
-fn make_ticket_entry(
-    t: &IndexedEntity,
-    workspace_root: &Path,
-) -> IndexEntry {
+fn make_ticket_entry(t: &IndexedEntity, workspace_root: &Path) -> IndexEntry {
     let source_path = to_relative_slash(workspace_root, &t.path);
     let title = t.title.clone().unwrap_or_else(|| t.id.to_string());
     let state = t.state.clone().unwrap_or_default();
@@ -111,12 +107,7 @@ mod tests {
     use std::path::PathBuf;
     use uuid::Uuid;
 
-    fn fake_ticket(
-        id: Uuid,
-        title: &str,
-        state: &str,
-        path: PathBuf,
-    ) -> IndexedEntity {
+    fn fake_ticket(id: Uuid, title: &str, state: &str, path: PathBuf) -> IndexedEntity {
         IndexedEntity {
             id,
             path,
@@ -131,10 +122,8 @@ mod tests {
     #[test]
     fn generate_ticket_sidecar_produces_sealed_sorted_entries() {
         let ws = PathBuf::from("/workspace");
-        let id_a =
-            Uuid::parse_str("aaaaaaaa-0000-0000-0000-000000000000").unwrap();
-        let id_b =
-            Uuid::parse_str("bbbbbbbb-0000-0000-0000-000000000000").unwrap();
+        let id_a = Uuid::parse_str("aaaaaaaa-0000-0000-0000-000000000000").unwrap();
+        let id_b = Uuid::parse_str("bbbbbbbb-0000-0000-0000-000000000000").unwrap();
 
         let tickets = vec![
             fake_ticket(
