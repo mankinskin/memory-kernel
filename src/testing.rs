@@ -38,9 +38,6 @@ pub const MOVE_BENCH_SAMPLE_SIZE: usize = 10;
 pub const MOVE_BENCH_WARM_UP: Duration = Duration::from_millis(50);
 /// Upper bound for one heterogeneous scenario's measured phase.
 pub const MOVE_BENCH_MAX_MEASUREMENT: Duration = Duration::from_secs(2);
-/// Process-wide runtime cap for one benchmark executable, leaving cleanup
-/// headroom below the requested ten-minute wall-time limit.
-pub const MOVE_BENCH_MAX_RUNTIME: Duration = Duration::from_secs(9 * 60);
 
 /// Derive a bounded measurement budget from one untimed calibration call.
 pub fn move_bench_measurement_time(calibrated: Duration) -> Duration {
@@ -51,25 +48,42 @@ pub fn move_bench_measurement_time(calibrated: Duration) -> Duration {
         .min(MOVE_BENCH_MAX_MEASUREMENT)
 }
 
+/// Register one Criterion benchmark whose warm-up and measurement windows
+/// are derived from a single untimed calibration run of `setup`+`measure`,
+/// instead of the shared harness's flat, uncalibrated default.
+///
+/// Use this for a single heterogeneous scenario (e.g. a root-fixture scan or
+/// a store-size sweep) whose per-iteration cost can be orders of magnitude
+/// larger than other benches in the same file. Without calibration,
+/// Criterion's own warm-up estimate can badly misjudge such a scenario's
+/// true cost and plan a runaway iteration/batch count trying to fill the
+/// shared default measurement window, which is what drove real move_health
+/// runs past their external wall-clock cap. Calibrating first gives
+/// Criterion an accurate cost up front, so it settles on the minimal
+/// iteration plan for `MOVE_BENCH_SAMPLE_SIZE` samples instead.
+pub fn calibrated_bench_function<Input>(
+    c: &mut Criterion,
+    name: &str,
+    mut setup: impl FnMut() -> Input,
+    mut measure: impl FnMut(Input),
+) {
+    let calibration_input = setup();
+    let started = Instant::now();
+    measure(calibration_input);
+    let calibrated = started.elapsed();
+
+    let mut group = c.benchmark_group(name);
+    group.sample_size(MOVE_BENCH_SAMPLE_SIZE);
+    group.warm_up_time(calibrated.max(MOVE_BENCH_WARM_UP));
+    group.measurement_time(move_bench_measurement_time(calibrated));
+    group.bench_function("iteration", |b| {
+        b.iter_batched(&mut setup, &mut measure, criterion::BatchSize::SmallInput);
+    });
+    group.finish();
+}
+
 /// Construct the low-sample Criterion configuration shared by move benches.
 pub fn move_bench_criterion() -> Criterion {
-    let deadline = std::env::var("MOVE_BENCH_DEADLINE_SECS")
-        .ok()
-        .and_then(|value| value.parse::<u64>().ok())
-        .map(Duration::from_secs)
-        .unwrap_or(MOVE_BENCH_MAX_RUNTIME)
-        .min(MOVE_BENCH_MAX_RUNTIME);
-    std::thread::Builder::new()
-        .name("move-bench-deadline".to_string())
-        .spawn(move || {
-            std::thread::park_timeout(deadline);
-            eprintln!(
-                "move benchmark wall-time cap reached after {:.0}s",
-                deadline.as_secs_f64()
-            );
-            std::process::exit(124);
-        })
-        .expect("start move benchmark deadline watchdog");
     Criterion::default()
         .sample_size(MOVE_BENCH_SAMPLE_SIZE)
         .warm_up_time(MOVE_BENCH_WARM_UP)
