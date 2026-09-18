@@ -45,7 +45,10 @@ fn resolve_local_root_from_defaults_to_start_directory() {
 
     let resolved = resolve_local_root_from(&nested, ".spec-test-only");
 
-    assert_eq!(resolved, nested.join(".spec-test-only"));
+    assert_eq!(
+        resolved,
+        nested.join(CANONICAL_STORES_DIR).join("spec-test-only")
+    );
 }
 
 #[test]
@@ -80,7 +83,10 @@ fn resolve_store_root_from_preserves_non_workspace_directory() {
 
     let resolved = resolve_store_root_from(&scratch, ".ticket");
 
-    assert_eq!(resolved, scratch.join(".ticket"));
+    assert_eq!(
+        resolved,
+        scratch.join(CANONICAL_STORES_DIR).join("ticket")
+    );
 }
 
 #[test]
@@ -126,11 +132,12 @@ fn store_layout_resolution_covers_every_registered_domain() {
         std::fs::remove_dir_all(&legacy).unwrap();
         std::fs::remove_dir_all(repo.join(CANONICAL_STORES_DIR)).unwrap();
 
-        let resolution = resolve_store_root_from_with_diagnostics(&nested, legacy_name);
-        assert!(resolution.store_root.ends_with(legacy_name));
-        if resolution.store_root == nested.join(legacy_name) {
-            assert!(resolution.diagnostics.is_empty());
-        }
+        let resolution = resolve_store_root_at_workspace(&nested, legacy_name);
+        assert_eq!(
+            resolution.store_root,
+            nested.join(CANONICAL_STORES_DIR).join(domain)
+        );
+        assert!(resolution.diagnostics.is_empty());
         assert_eq!(
             resolve_requested_store_root_for_initialization_from(
                 None,
@@ -169,7 +176,10 @@ fn explicit_workspace_does_not_fall_back_to_parent_store() {
     let resolved =
         resolve_requested_store_root_from(None, Some(&consumer), None, Some(&parent), ".ticket");
 
-    assert_eq!(resolved, consumer.join(".ticket"));
+    assert_eq!(
+        resolved,
+        consumer.join(CANONICAL_STORES_DIR).join("ticket")
+    );
 }
 
 #[test]
@@ -503,16 +513,26 @@ fn workspace_recovery_hint_uses_policy_aware_discovery() {
     let dir = tempdir().unwrap();
     let repo = dir.path().join("repo");
     let fixtures = repo.join("test-fixtures");
-    std::fs::create_dir_all(repo.join(".ticket")).unwrap();
-    std::fs::create_dir_all(fixtures.join(".ticket")).unwrap();
+    std::fs::create_dir_all(repo.join(CANONICAL_STORES_DIR).join("ticket")).unwrap();
+    std::fs::create_dir_all(
+        fixtures.join(CANONICAL_STORES_DIR).join("ticket"),
+    )
+    .unwrap();
     std::fs::write(
-        repo.join(".ticket").join("workspace-policy.toml"),
+        repo.join(CANONICAL_STORES_DIR)
+            .join("ticket")
+            .join("workspace-policy.toml"),
         "include_descendants = true\nignore_workspaces = [\"test-fixtures\"]\n",
     )
     .unwrap();
 
     let hint =
-        workspace_recovery_hint_for_store(&repo.join(".ticket"), ".ticket", "tickets", "ticket");
+        workspace_recovery_hint_for_store(
+            &repo.join(CANONICAL_STORES_DIR).join("ticket"),
+            ".ticket",
+            "tickets",
+            "ticket",
+        );
 
     assert!(hint.contains("Discovered ticket stores"));
     assert!(!hint.contains("test-fixtures/.ticket"));
@@ -526,8 +546,11 @@ fn resolve_workspace_from_reports_default_local_ticket() {
 
     let (path, source) = resolve_workspace_from(&repo);
 
-    assert_eq!(path, repo.join(".ticket"));
-    assert_eq!(source, WorkspaceSource::Default(repo.join(".ticket")));
+    assert_eq!(path, repo.join(CANONICAL_STORES_DIR).join("ticket"));
+    assert_eq!(
+        source,
+        WorkspaceSource::Default(repo.join(CANONICAL_STORES_DIR).join("ticket"))
+    );
 }
 
 #[test]

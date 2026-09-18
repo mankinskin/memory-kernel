@@ -1,6 +1,7 @@
 //! Explicit workspace-policy layer for scan-root discovery.
 //!
-//! The policy is loaded from `<workspace_root>/.ticket/workspace-policy.toml`
+//! The policy is loaded from
+//! `<workspace_root>/.workflow-tools/ticket/workspace-policy.toml`
 //! and governs which workspaces are discovered, scanned, and queried. This
 //! module owns parsing and in-memory representation only; wiring into the
 //! discovery, scan, and query paths is handled by later slices.
@@ -16,8 +17,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::workspace::{normalize_slashes, TICKET_INDEX_DIR};
 
-/// Policy file name, resolved under `<workspace_root>/.ticket/`.
+/// Policy file name, resolved under the canonical ticket store.
 pub const WORKSPACE_POLICY_FILE: &str = "workspace-policy.toml";
+
+fn policy_path(workspace_root: &Path) -> std::path::PathBuf {
+    crate::workspace::canonical_store_root(workspace_root, TICKET_INDEX_DIR)
+        .join(WORKSPACE_POLICY_FILE)
+}
 
 const fn default_true() -> bool {
     true
@@ -30,7 +36,7 @@ fn default_ignore_markers() -> Vec<String> {
     ]
 }
 
-/// In-memory representation of `.ticket/workspace-policy.toml`.
+/// In-memory representation of the canonical ticket-store policy file.
 ///
 /// Per-field defaults are applied for partial files via `#[serde(default)]`
 /// on each field, so an empty or partial policy still yields the documented
@@ -140,9 +146,7 @@ impl WorkspacePolicy {
 /// - Absent file: compatibility-mode defaults with a single warning.
 /// - Malformed file: warns and falls back to compatibility-mode defaults.
 pub fn load_workspace_policy(workspace_root: &Path) -> WorkspacePolicy {
-    let policy_path = workspace_root
-        .join(TICKET_INDEX_DIR)
-        .join(WORKSPACE_POLICY_FILE);
+    let policy_path = policy_path(workspace_root);
     let trace_path = normalize_slashes(&policy_path);
 
     match std::fs::read_to_string(&policy_path) {
@@ -177,14 +181,12 @@ pub fn load_workspace_policy(workspace_root: &Path) -> WorkspacePolicy {
 /// silently drop all fields). Intended for mutation flows that should start
 /// from documented defaults rather than compatibility-mode defaults.
 pub fn load_workspace_policy_file(workspace_root: &Path) -> Option<WorkspacePolicy> {
-    let policy_path = workspace_root
-        .join(TICKET_INDEX_DIR)
-        .join(WORKSPACE_POLICY_FILE);
+    let policy_path = policy_path(workspace_root);
     let contents = std::fs::read_to_string(&policy_path).ok()?;
     Some(toml::from_str(&contents).unwrap_or_default())
 }
 
-/// Persist `policy` to `<workspace_root>/.ticket/workspace-policy.toml`.
+/// Persist `policy` to the canonical ticket-store policy file.
 ///
 /// Creates the `.ticket/` directory when absent and serializes deterministically
 /// via the [`WorkspacePolicy`] type (field-ordered TOML), so `set`/`add`/`remove`
@@ -193,7 +195,7 @@ pub fn save_workspace_policy(
     workspace_root: &Path,
     policy: &WorkspacePolicy,
 ) -> std::io::Result<()> {
-    let ticket_dir = workspace_root.join(TICKET_INDEX_DIR);
+    let ticket_dir = crate::workspace::canonical_store_root(workspace_root, TICKET_INDEX_DIR);
     std::fs::create_dir_all(&ticket_dir)?;
     let policy_path = ticket_dir.join(WORKSPACE_POLICY_FILE);
     let contents = toml::to_string_pretty(policy)
@@ -288,7 +290,7 @@ ignore_markers = [".skip"]
     #[test]
     fn present_file_is_authoritative() {
         let dir = tempdir().unwrap();
-        let ticket_dir = dir.path().join(TICKET_INDEX_DIR);
+        let ticket_dir = crate::workspace::canonical_store_root(dir.path(), TICKET_INDEX_DIR);
         std::fs::create_dir_all(&ticket_dir).unwrap();
         std::fs::write(
             ticket_dir.join(WORKSPACE_POLICY_FILE),
@@ -305,7 +307,7 @@ ignore_markers = [".skip"]
     #[test]
     fn malformed_file_falls_back_to_compatibility_mode() {
         let dir = tempdir().unwrap();
-        let ticket_dir = dir.path().join(TICKET_INDEX_DIR);
+        let ticket_dir = crate::workspace::canonical_store_root(dir.path(), TICKET_INDEX_DIR);
         std::fs::create_dir_all(&ticket_dir).unwrap();
         std::fs::write(
             ticket_dir.join(WORKSPACE_POLICY_FILE),

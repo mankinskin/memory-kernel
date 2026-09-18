@@ -352,7 +352,8 @@ pub fn resolve_local_root(dir_name: &str) -> PathBuf {
 }
 
 pub fn resolve_local_root_from(start: &Path, dir_name: &str) -> PathBuf {
-    find_local_root_from(start, dir_name).unwrap_or_else(|| start_dir(start).join(dir_name))
+    find_local_root_from(start, dir_name)
+        .unwrap_or_else(|| canonical_store_root(start_dir(start), dir_name))
 }
 
 pub fn resolve_store_root_from(start: &Path, dir_name: &str) -> PathBuf {
@@ -388,7 +389,7 @@ pub fn resolve_store_root_from_with_diagnostics(
             Some(parent) => workspace = parent,
             None => {
                 return StoreRootResolution {
-                    store_root: start_dir(&normalized).join(dir_name),
+                    store_root: canonical_store_root(start_dir(&normalized), dir_name),
                     diagnostics: Vec::new(),
                 };
             }
@@ -470,7 +471,7 @@ pub fn resolve_requested_store_root_from_with_diagnostics(
             return resolve_store_root_at_workspace(&workspace, dir_name);
         }
         return StoreRootResolution {
-            store_root: start_dir(cwd).join(dir_name),
+            store_root: canonical_store_root(start_dir(cwd), dir_name),
             diagnostics: Vec::new(),
         };
     }
@@ -839,7 +840,7 @@ pub fn resolve_workspace() -> (PathBuf, WorkspaceSource) {
     working_dir()
         .map(|cwd| resolve_workspace_from(&cwd))
         .unwrap_or_else(|| {
-            let path = PathBuf::from(TICKET_INDEX_DIR);
+            let path = canonical_store_root(Path::new("."), TICKET_INDEX_DIR);
             (path.clone(), WorkspaceSource::Default(path))
         })
 }
@@ -849,7 +850,7 @@ pub fn resolve_workspace_from(start: &Path) -> (PathBuf, WorkspaceSource) {
         return (path.clone(), WorkspaceSource::Discovered(path));
     }
 
-    let path = start_dir(start).join(TICKET_INDEX_DIR);
+    let path = canonical_store_root(start_dir(start), TICKET_INDEX_DIR);
     (path.clone(), WorkspaceSource::Default(path))
 }
 
@@ -952,15 +953,15 @@ fn find_store_at_workspace(workspace: &Path, dir_name: &str) -> Option<PathBuf> 
 /// (worktree-scoped resolvers, security-sensitive mutation gates) that must
 /// not escape a specific workspace/worktree boundary by searching upward.
 /// Resolution order: an existing canonical `.workflow-tools/<domain>` store,
-/// then an existing legacy bare `<dir_name>` store, then the legacy bare path
-/// (unchanged default location for a not-yet-created store, preserving every
-/// existing caller's current default-creation behavior).
+/// then an existing legacy bare `<dir_name>` store, then the canonical path
+/// for a not-yet-created store.
 pub fn resolve_store_root_at_fixed_workspace(workspace: &Path, dir_name: &str) -> PathBuf {
     let normalized = normalize_working_dir_path(workspace);
     if is_store_root(&normalized, dir_name) {
         return normalized;
     }
-    find_store_at_workspace(&normalized, dir_name).unwrap_or_else(|| normalized.join(dir_name))
+    find_store_at_workspace(&normalized, dir_name)
+        .unwrap_or_else(|| canonical_store_root(&normalized, dir_name))
 }
 
 fn resolve_store_root_at_workspace(workspace: &Path, dir_name: &str) -> StoreRootResolution {
@@ -996,17 +997,7 @@ fn resolve_store_root_at_workspace(workspace: &Path, dir_name: &str) -> StoreRoo
 }
 
 fn resolve_store_root_at_workspace_read(workspace: &Path, dir_name: &str) -> StoreRootResolution {
-    let resolution = resolve_store_root_at_workspace(workspace, dir_name);
-    if resolution.store_root == canonical_store_root(workspace, dir_name)
-        && resolution.diagnostics.is_empty()
-    {
-        StoreRootResolution {
-            store_root: workspace.join(dir_name),
-            diagnostics: Vec::new(),
-        }
-    } else {
-        resolution
-    }
+    resolve_store_root_at_workspace(workspace, dir_name)
 }
 
 fn is_store_root(path: &Path, dir_name: &str) -> bool {
