@@ -74,7 +74,7 @@ pub fn plan_move<D: MoveDomain + ?Sized>(
     let source_workspace_root =
         crate::workspace::resolve_workspace_root_from_store_root(&source_store_root, &index_dir);
     let target_store_root =
-        crate::workspace::resolve_store_root_at_fixed_workspace(target_workspace_root, &index_dir);
+        crate::workspace::canonical_store_root(target_workspace_root, &index_dir);
 
     let subdir = domain.entity_subdir().to_string();
     let source_entity_path = domain.source_entity_path(entity_id)?;
@@ -215,7 +215,7 @@ pub fn plan_move_set<D: MoveDomain + ?Sized>(
     let source_workspace_root =
         crate::workspace::resolve_workspace_root_from_store_root(&source_store_root, &index_dir);
     let target_store_root =
-        crate::workspace::resolve_store_root_at_fixed_workspace(target_workspace_root, &index_dir);
+        crate::workspace::canonical_store_root(target_workspace_root, &index_dir);
 
     let source_git_root = git_toplevel(&source_workspace_root).map_err(MoveError::Domain)?;
     let mut shared_blockers = Vec::new();
@@ -1110,7 +1110,7 @@ mod move_set_tests {
     use std::cell::Cell;
 
     /// Minimal [`MoveDomain`] fixture backed by plain folders under a
-    /// `.fixture` store marker: an entity "exists" iff
+    /// `.workflow-tools/fixture` store marker: an entity "exists" iff
     /// `<store_root>/entities/<id>` is a directory. No edges, board, or
     /// leases — those hooks use the trait's empty defaults.
     struct FixtureDomain {
@@ -1186,9 +1186,10 @@ mod move_set_tests {
         init_git_repo(repo.path());
         let source_ws = repo.path().join("source");
         let target_ws = repo.path().join("target");
-        fs::create_dir_all(source_ws.join(".fixture").join("entities"))
+        fs::create_dir_all(source_ws.join(".workflow-tools").join("fixture").join("entities"))
             .expect("create source store");
-        fs::create_dir_all(target_ws.join(".fixture")).expect("create target store");
+        fs::create_dir_all(target_ws.join(".workflow-tools").join("fixture"))
+            .expect("create target store");
         (repo, source_ws, target_ws)
     }
 
@@ -1205,7 +1206,7 @@ mod move_set_tests {
     fn plan_move_set_matches_plan_move_for_single_entity() {
         let (_repo, source_ws, target_ws) = setup_repo();
         let domain = FixtureDomain {
-            source_store_root: source_ws.join(".fixture"),
+            source_store_root: source_ws.join(".workflow-tools").join("fixture"),
             fail_scan_number: Cell::new(None),
             scan_calls: Cell::new(0),
         };
@@ -1240,7 +1241,7 @@ mod move_set_tests {
     fn plan_move_set_batches_tracked_path_references_per_entity() {
         let (repo, source_ws, target_ws) = setup_repo();
         let domain = FixtureDomain {
-            source_store_root: source_ws.join(".fixture"),
+            source_store_root: source_ws.join(".workflow-tools").join("fixture"),
             fail_scan_number: Cell::new(None),
             scan_calls: Cell::new(0),
         };
@@ -1289,7 +1290,7 @@ mod move_set_tests {
     fn plan_move_set_propagates_missing_source_blocker_per_entity() {
         let (_repo, source_ws, target_ws) = setup_repo();
         let domain = FixtureDomain {
-            source_store_root: source_ws.join(".fixture"),
+            source_store_root: source_ws.join(".workflow-tools").join("fixture"),
             fail_scan_number: Cell::new(None),
             scan_calls: Cell::new(0),
         };
@@ -1328,7 +1329,7 @@ mod move_set_tests {
     fn execute_move_set_moves_all_entities_and_supports_per_entity_rollback() {
         let (_repo, source_ws, target_ws) = setup_repo();
         let domain = FixtureDomain {
-            source_store_root: source_ws.join(".fixture"),
+            source_store_root: source_ws.join(".workflow-tools").join("fixture"),
             fail_scan_number: Cell::new(None),
             scan_calls: Cell::new(0),
         };
@@ -1366,7 +1367,7 @@ mod move_set_tests {
         // Recovery path: an individual entity's journal produced by the set
         // operation remains independently rollback-able via the existing
         // single-entity `rollback_move`.
-        let target_store_root = target_ws.join(".fixture");
+        let target_store_root = target_ws.join(".workflow-tools").join("fixture");
         let entity_a_outcome = outcome
             .entity_outcomes
             .iter()
@@ -1398,7 +1399,7 @@ mod move_set_tests {
     fn resume_move_set_skips_completed_entities() {
         let (_repo, source_ws, target_ws) = setup_repo();
         let domain = FixtureDomain {
-            source_store_root: source_ws.join(".fixture"),
+            source_store_root: source_ws.join(".workflow-tools").join("fixture"),
             fail_scan_number: Cell::new(Some(2)),
             scan_calls: Cell::new(0),
         };
@@ -1444,7 +1445,7 @@ mod move_set_tests {
     fn rollback_move_set_is_idempotent() {
         let (_repo, source_ws, target_ws) = setup_repo();
         let domain = FixtureDomain {
-            source_store_root: source_ws.join(".fixture"),
+            source_store_root: source_ws.join(".workflow-tools").join("fixture"),
             fail_scan_number: Cell::new(None),
             scan_calls: Cell::new(0),
         };
