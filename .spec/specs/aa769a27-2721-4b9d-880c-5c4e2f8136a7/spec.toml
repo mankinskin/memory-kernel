@@ -1,0 +1,8 @@
+id = "aa769a27-2721-4b9d-880c-5c4e2f8136a7"
+created_at = "2026-07-01T01:24:46.329354800+00:00"
+title = "Memory-system observability and log-api runtime diagnostics"
+state = "draft"
+component = "memory-kernel"
+scope = "internal"
+slug = "memory-api/observability/runtime-logging"
+type = "specification"

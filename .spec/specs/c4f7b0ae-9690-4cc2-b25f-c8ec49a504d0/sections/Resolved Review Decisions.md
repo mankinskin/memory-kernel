@@ -1,0 +1,5 @@
+Approved 2026-06-15. These decisions resolve the review open questions.
+
+- **Q4.1 Tier 0 = the provenance marker.** Tier 0 is the per-entry comment `<!-- <prefix>:entry id=<uuid> slug=<slug> digest=<first-12-hex> -->` emitted by `render_markdown_file` (see rendering spec `9109f12a`). No extra body line is added; `peek --grep <id|digest>` locates the entry and `peek --window` reads its block.
+- **Q4.2 `--skeleton` is out of scope for TOON.** `--skeleton` is a code-structure mode with no meaningful mapping to TOON records. The TOON tier is covered by `--grep` on `id`/`digest` plus bounded record reads. `--skeleton` is not part of the TOON validation matrix.
+- **Q4.3 Quantified bounded-size check.** Replace "bounded" with automatable thresholds: each entry block is at most 40 lines (Tier-1 windowable in a single `peek --start/--end`); a generated README exceeding 1500 lines must paginate or split by group. `peek --count` asserts the file stays navigable under these limits.

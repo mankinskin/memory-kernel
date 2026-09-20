@@ -1,0 +1,10 @@
+id = "66538d9e-c8ff-4dd8-b3df-a12dc9984a0e"
+created_at = "2026-07-25T15:43:09.894517200+00:00"
+title = "Memory kernel standalone extraction"
+state = "draft"
+component = "memory-kernel"
+related_tickets = ["13912e44-fee8-4aa5-b28f-68bbc22af401", "2b1279bd-c42f-4b0e-8835-d0d645a733ab"]
+scope = "public"
+slug = "workflow-tools/memory-kernel-extraction"
+tickets = ["e12d8343-24f2-4b5d-8023-5a071238904a"]
+type = "specification"

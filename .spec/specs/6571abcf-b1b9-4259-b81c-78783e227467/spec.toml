@@ -1,0 +1,8 @@
+id = "6571abcf-b1b9-4259-b81c-78783e227467"
+created_at = "2026-06-17T12:24:40.380935800+00:00"
+title = "Cross-store workspace interaction architecture"
+state = "draft"
+component = "memory-kernel"
+scope = "public"
+slug = "architecture/cross-store-workspace-interaction"
+type = "specification"

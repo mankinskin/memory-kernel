@@ -1,0 +1,4 @@
+Approved 2026-06-15. These decisions resolve the review open questions and refine the contract above.
+
+- **Q1.1 Migration = delete, not deprecate.** When each generator ticket lands, its normalization + entrypoint move to the owning domain crate/CLI and the corresponding `memory-api/src/index_generator/<domain>.rs` is deleted (no adapter shims — there are no external consumers yet). Genuinely generic helpers (`to_relative_slash`, `deterministic_uuid`) are promoted to a public `memory-api` util module rather than left in `index_generator/ticket.rs`.
+- **Q1.2 `ContentKind` ownership.** The `ContentKind` enum is owned by `memory-api`. Adding a variant is an append-only, non-breaking schema change that requires a `memory-api` maintainer review (it feeds digest field 2 and the serde wire format). Variants are never removed or renamed without a migration. A new-domain author proposes the variant via PR to `memory-api`.

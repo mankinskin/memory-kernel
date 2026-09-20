@@ -1,0 +1,5 @@
+Approved 2026-06-15. These decisions resolve the review open questions.
+
+- **Q5.1 "Incremental" is driven by git-staged paths.** The hook computes `git diff --cached --name-only`; the incremental run regenerates only entries whose source files are in the staged set, then re-seals the full sidecar (cheap) and diffs. The benchmark fixture models this as "1 changed entity out of N." This aligns the benchmark with the actual hook trigger rather than mtime/`updated_at` heuristics.
+- **Q5.2 Benches live in the destination domain crate, written post-migration.** Writing benches in `memory-api/benches/` now would benchmark code about to be deleted. Sequence per generator ticket: migrate the generator -> add its Criterion bench in the domain crate -> record the P4 numbers. This spec fixes the methodology; the numbers are produced per generator ticket.
+- **Q5.3 Gate on the Windows dev baseline; CI is advisory.** The hook runs locally at commit time on a Windows-primary repo, so the local budget gates (H5). Record p50/p95 on the Windows dev baseline and note the measurement OS alongside each number. CI runs benches for regression tracking only.

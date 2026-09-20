@@ -1,0 +1,6 @@
+Approved 2026-06-15. These decisions resolve the review open questions.
+
+- **Q3.1 Regenerate-on-upgrade, no in-place migration.** Sidecars are fully derived artifacts with no hand-authored data. The first generator run after a normalization-rule change rewrites every sidecar; the git hook's drift detection flags and restages them. N3 is amended: "Sealed sidecars from an earlier normalization revision are treated as stale and fully regenerated; digests are never migrated in place."
+- **Q3.2 Shared stop-list, domain-extensible.** A small fixed English stop list lives as a versioned `memory-api` constant (generic infra). Each domain may pass an additional stop set (e.g. ticket states, `"spec"`, `"ticket"`). Keeping the baseline in one place keeps digests stable and avoids five drifting copies. N4 references this shared baseline.
+- **Q3.3 Ticket `summary` precedence (deterministic).** Prefer the first non-heading paragraph of `## Goal`; else the first paragraph of `## Problem`; else the first non-heading text block; else the state phrase. Normalize per N3.
+- **Q3.4 Ticket `scope` / `non_goals` extraction.** Extract the `## Scope` and `## Non-goals` section bodies when present (normalized per N6); `None` when the heading is absent. The repo's tickets reliably use those exact headings, so extraction enriches the digest and the Tier-2 LOD view at low cost.

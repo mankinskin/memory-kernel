@@ -1,0 +1,9 @@
+id = "53a23ab2-0ea4-4c4c-8a8b-0066c5219d8f"
+created_at = "2026-07-25T15:49:18.471371300+00:00"
+title = "Shared transport harness"
+state = "draft"
+component = "memory-kernel"
+scope = "public"
+slug = "workflow-tools/shared-transport-harness"
+tickets = ["dbe0e955-c1b4-414d-820c-10c3fbbb5d3d", "0da6894c-dcbb-4196-8ac7-b6fae7c40ec9"]
+type = "specification"
