@@ -1,0 +1,8 @@
+id = "a969562b-6920-4fa6-a757-d317e7d442df"
+created_at = "2026-07-11T16:48:31.491514200+00:00"
+title = "rule-cli single-target reverse-sync from generated artifacts"
+state = "draft"
+component = "rule"
+scope = "internal"
+slug = "rule-system/single-target-reverse-sync"
+type = "specification"

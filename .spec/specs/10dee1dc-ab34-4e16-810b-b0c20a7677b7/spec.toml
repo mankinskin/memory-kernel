@@ -1,0 +1,8 @@
+id = "10dee1dc-ab34-4e16-810b-b0c20a7677b7"
+created_at = "2026-07-31T18:47:39.049189600+00:00"
+title = "Board-to-session worktree binding and active-worktree discovery"
+state = "draft"
+component = "ticket"
+slug = "ticket-api/board/session-worktree-binding"
+ticket_ids = ["c060bf94-2435-4cc5-8016-ca1d2c8264f5"]
+type = "specification"

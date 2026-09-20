@@ -98,6 +98,18 @@ pub enum MoveBlocker {
         )]
         target_store_root: PathBuf,
     },
+    TargetStoreOutsideWorkspace {
+        #[serde(
+            serialize_with = "serialize_normalized_path",
+            deserialize_with = "deserialize_pathbuf"
+        )]
+        target_workspace_root: PathBuf,
+        #[serde(
+            serialize_with = "serialize_normalized_path",
+            deserialize_with = "deserialize_pathbuf"
+        )]
+        target_store_root: PathBuf,
+    },
     ActiveOrStaleBoardEntry {
         entry_id: Uuid,
         status: String,

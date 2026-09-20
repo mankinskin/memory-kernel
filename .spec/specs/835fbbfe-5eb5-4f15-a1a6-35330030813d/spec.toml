@@ -1,0 +1,8 @@
+id = "835fbbfe-5eb5-4f15-a1a6-35330030813d"
+created_at = "2026-09-05T17:04:12.667525900+00:00"
+title = "Feedback History Analytics"
+state = "draft"
+component = "feedback"
+scope = "internal"
+slug = "feedback/analytics"
+type = "specification"

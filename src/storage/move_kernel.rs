@@ -85,6 +85,13 @@ pub fn plan_move<D: MoveDomain + ?Sized>(
 
     let mut blockers = Vec::new();
 
+    if !target_store_root.starts_with(target_workspace_root) {
+        blockers.push(MoveBlocker::TargetStoreOutsideWorkspace {
+            target_workspace_root: target_workspace_root.to_path_buf(),
+            target_store_root: target_store_root.clone(),
+        });
+    }
+
     let source_git_root = git_toplevel(&source_workspace_root).map_err(MoveError::Domain)?;
     let target_git_root =
         resolve_target_git_root_or_block(target_workspace_root, &source_git_root, &mut blockers);
@@ -212,6 +219,12 @@ pub fn plan_move_set<D: MoveDomain + ?Sized>(
 
     let source_git_root = git_toplevel(&source_workspace_root).map_err(MoveError::Domain)?;
     let mut shared_blockers = Vec::new();
+    if !target_store_root.starts_with(target_workspace_root) {
+        shared_blockers.push(MoveBlocker::TargetStoreOutsideWorkspace {
+            target_workspace_root: target_workspace_root.to_path_buf(),
+            target_store_root: target_store_root.clone(),
+        });
+    }
     let target_git_root = resolve_target_git_root_or_block(
         target_workspace_root,
         &source_git_root,
@@ -967,10 +980,8 @@ fn execute_move_set_journal<D: MoveDomain + ?Sized>(
                 journal.completed_entity_ids.push(plan.entity_id);
                 journal.entity_errors.remove(&plan.entity_id);
                 entity_outcomes.push(outcome);
-                if journal.completed_entity_ids.len() % MOVE_SET_JOURNAL_CHECKPOINT_INTERVAL == 0 {
-                    journal.updated_at = Utc::now();
-                    persist_move_set_journal(&journal.source_store_root, journal)?;
-                }
+                journal.updated_at = Utc::now();
+                persist_move_set_journal(&journal.source_store_root, journal)?;
             }
             Err(error) => {
                 journal
