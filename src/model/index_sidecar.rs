@@ -349,10 +349,10 @@ mod tests {
     fn encode_decode_roundtrip() {
         let sidecar = IndexSidecar::new(
             ContentKind::Ticket,
-            ".ticket",
+            ".workflow-tools/ticket",
             vec![make_entry(
                 Uuid::new_v4(),
-                ".ticket/tickets/abc/ticket.toml",
+                ".workflow-tools/ticket/tickets/abc/ticket.toml",
             )],
         );
         let toon = sidecar.encode_toon().expect("encode should succeed");

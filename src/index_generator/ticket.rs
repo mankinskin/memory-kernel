@@ -130,20 +130,20 @@ mod tests {
                 id_b,
                 "Ticket B",
                 "done",
-                ws.join(".ticket/tickets/b/ticket.toml"),
+                ws.join(".workflow-tools/ticket/tickets/b/ticket.toml"),
             ),
             fake_ticket(
                 id_a,
                 "Ticket A",
                 "new",
-                ws.join(".ticket/tickets/a/ticket.toml"),
+                ws.join(".workflow-tools/ticket/tickets/a/ticket.toml"),
             ),
         ];
 
         let sidecar = generate_ticket_sidecar(TicketIndexInput {
             tickets: &tickets,
             workspace_root: &ws,
-            store_dir: ".ticket",
+            store_dir: ".workflow-tools/ticket",
         });
 
         assert_eq!(sidecar.entries.len(), 2);
@@ -156,7 +156,11 @@ mod tests {
             assert!(e.is_digest_valid(), "sealed digest should be valid");
         }
         // source_path uses forward slashes and is relative
-        assert!(sidecar.entries[0].source_path.starts_with(".ticket/"));
+        assert!(
+            sidecar.entries[0]
+                .source_path
+                .starts_with(".workflow-tools/ticket/")
+        );
         assert!(!sidecar.entries[0].source_path.contains('\\'));
     }
 }

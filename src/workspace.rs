@@ -560,10 +560,6 @@ pub fn resolve_consumer_store_root_from(
         return Ok(PathBuf::from(dir_name));
     };
     let workspace = normalize_working_dir_path(start_dir(cwd));
-    if workspace.join(dir_name).is_dir() {
-        return Ok(workspace.join(dir_name));
-    }
-
     let stores = find_descendant_store_roots_from(&workspace, dir_name);
     if stores.len() > 1 {
         return Err(ConsumerWorkspaceError::AmbiguousSuperproject { workspace, stores });
@@ -757,7 +753,7 @@ pub fn discover_workspace_scan_roots_with_policy(
     // eligible when external paths are permitted and ancestors are requested.
     if policy.include_ancestors && !policy.deny_external_paths {
         for ancestor in workspace_root.ancestors().skip(1) {
-            let candidate = ancestor.join(store_dir);
+            let candidate = canonical_store_root(ancestor, store_dir);
             if !candidate.is_dir() {
                 continue;
             }
@@ -900,7 +896,7 @@ fn collect_descendant_store_roots(dir: &Path, dir_name: &str, roots: &mut Vec<Pa
             continue;
         };
 
-        if name == dir_name {
+        if name == dir_name && supports_legacy_layout(dir_name) {
             roots.push(normalize_working_dir_path(&path));
             continue;
         }
@@ -925,6 +921,10 @@ fn store_domain(dir_name: &str) -> &str {
     dir_name.trim_start_matches('.')
 }
 
+fn supports_legacy_layout(dir_name: &str) -> bool {
+    !matches!(dir_name, ".ticket" | ".spec")
+}
+
 /// The canonical `.workflow-tools/<domain>` location for a store at
 /// `workspace`, whether or not it exists yet.
 ///
@@ -942,6 +942,9 @@ fn find_store_at_workspace(workspace: &Path, dir_name: &str) -> Option<PathBuf> 
     if canonical.is_dir() {
         return Some(canonical);
     }
+    if !supports_legacy_layout(dir_name) {
+        return None;
+    }
     let legacy = workspace.join(dir_name);
     legacy.is_dir().then_some(legacy)
 }
@@ -953,8 +956,8 @@ fn find_store_at_workspace(workspace: &Path, dir_name: &str) -> Option<PathBuf> 
 /// (worktree-scoped resolvers, security-sensitive mutation gates) that must
 /// not escape a specific workspace/worktree boundary by searching upward.
 /// Resolution order: an existing canonical `.workflow-tools/<domain>` store,
-/// then an existing legacy bare `<dir_name>` store, then the canonical path
-/// for a not-yet-created store.
+/// then the canonical path for a not-yet-created store. Domains that still
+/// support legacy layouts may resolve their bare `<dir_name>` store.
 pub fn resolve_store_root_at_fixed_workspace(workspace: &Path, dir_name: &str) -> PathBuf {
     let normalized = normalize_working_dir_path(workspace);
     if is_store_root(&normalized, dir_name) {
@@ -968,7 +971,7 @@ fn resolve_store_root_at_workspace(workspace: &Path, dir_name: &str) -> StoreRoo
     let canonical_path = canonical_store_root(workspace, dir_name);
     let legacy_path = workspace.join(dir_name);
     let canonical_exists = canonical_path.is_dir();
-    let legacy_exists = legacy_path.is_dir();
+    let legacy_exists = supports_legacy_layout(dir_name) && legacy_path.is_dir();
     let domain = store_domain(dir_name).to_string();
 
     let diagnostics = match (canonical_exists, legacy_exists) {

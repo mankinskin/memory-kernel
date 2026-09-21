@@ -72,7 +72,7 @@ mod tests {
     #[test]
     fn ensure_sqlite_index_root_creates_gitignore_when_missing() {
         let dir = tempdir().unwrap();
-        let root = dir.path().join(".spec");
+        let root = dir.path().join(".workflow-tools").join("spec");
 
         ensure_sqlite_index_root(&root, "entities.db", &["search_index/"]).unwrap();
 

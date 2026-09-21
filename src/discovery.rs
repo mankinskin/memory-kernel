@@ -125,6 +125,7 @@ fn walk(dir: &Path, depth: usize, visited: &mut BTreeSet<PathBuf>, out: &mut Vec
 fn store_kind_for(name: &str) -> Option<ContentKind> {
     STORE_MARKERS
         .iter()
+    .filter(|(marker, _)| !matches!(*marker, ".ticket" | ".spec"))
         .find(|(marker, _)| *marker == name)
         .map(|(_, kind)| *kind)
 }
@@ -234,10 +235,10 @@ mod tests {
     fn discovers_nested_stores_tagged_by_kind() {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
-        mk(root, ".ticket");
-        mk(root, ".spec");
-        mk(root, "sub/nested/.rule");
-        mk(root, "sub/.test");
+        mk(root, ".workflow-tools/ticket");
+        mk(root, ".workflow-tools/spec");
+        mk(root, "sub/nested/.workflow-tools/rule");
+        mk(root, "sub/.workflow-tools/test");
 
         let kinds: HashSet<_> = discover_stores(root).into_iter().map(|s| s.kind).collect();
         assert!(kinds.contains(&ContentKind::Ticket));
@@ -250,15 +251,15 @@ mod tests {
     fn prunes_heavy_dirs_and_does_not_recurse_into_stores() {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
-        mk(root, "target/.spec");
-        mk(root, "node_modules/pkg/.ticket");
-        mk(root, ".ticket/tickets/abc/.spec");
+        mk(root, "target/.workflow-tools/spec");
+        mk(root, "node_modules/pkg/.workflow-tools/ticket");
+        mk(root, ".workflow-tools/ticket/tickets/abc/.spec");
 
         let found = discover_stores(root);
-        // Only the top-level .ticket; pruned dirs and store internals excluded.
+        // Only the top-level canonical ticket store; pruned dirs and store internals excluded.
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].kind, ContentKind::Ticket);
-        assert_eq!(found[0].store_root, root.join(".ticket"));
+        assert_eq!(found[0].store_root, root.join(".workflow-tools/ticket"));
     }
 
     #[test]
@@ -287,7 +288,7 @@ mod tests {
     fn deduplicates_repeated_runs() {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
-        mk(root, ".spec");
+        mk(root, ".workflow-tools/spec");
         let a = discover_stores(root);
         let b = discover_stores(root);
         assert_eq!(a, b);
@@ -304,7 +305,7 @@ mod tests {
     fn absent_then_present_onboards_without_rebuild() {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
-        mk(root, ".ticket");
+        mk(root, ".workflow-tools/ticket");
 
         // First pass: ticket present, spec referenced but absent.
         let first = discover_stores(root);
@@ -312,7 +313,7 @@ mod tests {
 
         // A reference to a spec store that does not exist yet.
         let absent_spec = vec![DiscoveredStore {
-            store_root: root.join(".spec"),
+            store_root: root.join(".workflow-tools/spec"),
             workspace_root: root.to_path_buf(),
             kind: ContentKind::Spec,
         }];
@@ -325,7 +326,7 @@ mod tests {
         assert_eq!(summarize(&reports).diagnostic, 1);
 
         // Spec store appears later; reconcile integrates it without rebuild.
-        mk(root, ".spec");
+        mk(root, ".workflow-tools/spec");
         let known = discover_stores(root);
         let reports = reconcile_stores(&known, root);
         let spec = reports
@@ -340,9 +341,9 @@ mod tests {
     fn newly_added_store_is_discovered() {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
-        mk(root, ".ticket");
+        mk(root, ".workflow-tools/ticket");
         let prev = discover_stores(root);
-        mk(root, ".rule");
+        mk(root, ".workflow-tools/rule");
         let reports = reconcile_stores(&prev, root);
         let rule = reports
             .iter()

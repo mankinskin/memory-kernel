@@ -235,7 +235,7 @@ mod tests {
         let store = open_store(dir.path());
         store
             .add_scan_root(&ScanRoot {
-                path: PathBuf::from("/ws/.ticket/tickets"),
+                path: PathBuf::from("/ws/.workflow-tools/ticket/tickets"),
                 label: ".".to_string(),
             })
             .unwrap();
@@ -254,7 +254,7 @@ mod tests {
         store
             .add_scan_root_with_metadata(
                 &ScanRoot {
-                    path: PathBuf::from("/ws/fixtures/.ticket/tickets"),
+                    path: PathBuf::from("/ws/fixtures/.workflow-tools/ticket/tickets"),
                     label: "fixtures".to_string(),
                 },
                 &ScanRootMetadata {
@@ -289,7 +289,7 @@ mod tests {
                      label TEXT NOT NULL
                  );
                  INSERT INTO {TABLE_SCAN_ROOTS} (path, label)
-                 VALUES ('/legacy/.ticket/tickets', 'legacy');"
+                 VALUES ('/workspace/.workflow-tools/ticket/tickets', 'workspace');"
             ))
             .unwrap();
         }
@@ -298,7 +298,7 @@ mod tests {
         let store = RedbIndexStore::open(&db_path).unwrap();
         let roots = store.list_scan_roots_with_metadata().unwrap();
         assert_eq!(roots.len(), 1);
-        assert_eq!(roots[0].root.label, "legacy");
+        assert_eq!(roots[0].root.label, "workspace");
         assert_eq!(roots[0].metadata.source, ScanRootSource::Discovered);
         assert_eq!(roots[0].metadata.policy_decision, PolicyDecision::Included);
         assert_eq!(roots[0].metadata.workspace_root, None);

@@ -6,8 +6,8 @@ use crate::{
     discovery::discover_stores,
     model::index_entry::ContentKind,
     workspace::{
-        discover_workspace_scan_roots_with_policy, resolve_store_root_from,
-        resolve_workspace_root_from_store_root,
+        canonical_store_root, discover_workspace_scan_roots_with_policy,
+        resolve_store_root_from, resolve_workspace_root_from_store_root,
     },
     workspace_policy::WorkspacePolicy,
 };
@@ -64,10 +64,14 @@ impl CrossStoreEdgeClassifier {
         );
 
         for ancestor in active_workspace_root.ancestors().skip(1) {
-            let candidate = ancestor.join(layout.store_dir);
-            if candidate.is_dir() {
-                discoverable_store_roots
-                    .push(resolve_store_root_from(&candidate, layout.store_dir));
+            for candidate in [
+                canonical_store_root(ancestor, layout.store_dir),
+                ancestor.join(layout.store_dir),
+            ] {
+                if candidate.is_dir() {
+                    discoverable_store_roots
+                        .push(resolve_store_root_from(&candidate, layout.store_dir));
+                }
             }
         }
 
@@ -178,8 +182,7 @@ mod tests {
 
     fn write_entity(workspace_root: &Path, kind: ContentKind, id: Uuid) {
         let layout = StoreLayout::for_kind(kind).unwrap();
-        let path = workspace_root
-            .join(layout.store_dir)
+        let path = canonical_store_root(workspace_root, layout.store_dir)
             .join(layout.entity_dir)
             .join(id.to_string());
         fs::create_dir_all(&path).unwrap();
@@ -197,7 +200,7 @@ mod tests {
         write_entity(&child, ContentKind::Ticket, target_id);
 
         let classifier = CrossStoreEdgeClassifier::for_store(
-            &root.join(".ticket"),
+            &canonical_store_root(&root, ".ticket"),
             ContentKind::Ticket,
             WorkspacePolicy::compatibility_default(),
         )
@@ -224,7 +227,7 @@ mod tests {
         };
 
         let classifier = CrossStoreEdgeClassifier::for_store(
-            &child.join(".ticket"),
+            &canonical_store_root(&child, ".ticket"),
             ContentKind::Ticket,
             policy,
         )
@@ -246,7 +249,7 @@ mod tests {
         fs::create_dir_all(&root).unwrap();
 
         let classifier = CrossStoreEdgeClassifier::for_store(
-            &root.join(".ticket"),
+            &canonical_store_root(&root, ".ticket"),
             ContentKind::Ticket,
             WorkspacePolicy::compatibility_default(),
         )
@@ -278,14 +281,17 @@ mod tests {
         };
 
         let ticket = CrossStoreEdgeClassifier::for_store(
-            &child.join(".ticket"),
+            &canonical_store_root(&child, ".ticket"),
             ContentKind::Ticket,
             policy.clone(),
         )
         .unwrap();
-        let spec =
-            CrossStoreEdgeClassifier::for_store(&child.join(".spec"), ContentKind::Spec, policy)
-                .unwrap();
+        let spec = CrossStoreEdgeClassifier::for_store(
+            &canonical_store_root(&child, ".spec"),
+            ContentKind::Spec,
+            policy,
+        )
+        .unwrap();
 
         assert!(matches!(
             ticket.classify(ticket_id),
