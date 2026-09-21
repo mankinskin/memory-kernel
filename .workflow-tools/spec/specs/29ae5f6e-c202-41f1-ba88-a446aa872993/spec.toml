@@ -1,0 +1,8 @@
+id = "29ae5f6e-c202-41f1-ba88-a446aa872993"
+created_at = "2026-07-25T22:36:13.618064400+00:00"
+title = "Empirical tool-metrics driven cost-gate classification"
+state = "reviewed"
+component = "session"
+related_tickets = ["9185d8f2-1080-46b1-84da-485f9ad839f6", "56be2eaa-6b32-4291-857a-b2c1aa24f273", "9c29d697-f782-4737-aea1-645abf75cfb9"]
+slug = "session-api/tool-metrics/cost-gate-classification"
+type = "specification"

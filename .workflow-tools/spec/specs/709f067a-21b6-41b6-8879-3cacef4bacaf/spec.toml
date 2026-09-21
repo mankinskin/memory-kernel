@@ -1,0 +1,10 @@
+id = "709f067a-21b6-41b6-8879-3cacef4bacaf"
+created_at = "2026-06-27T09:50:44.190297200+00:00"
+title = "Runtime session-context model (pinned entities, init/pin/unpin/view)"
+state = "draft"
+component = "session"
+ticket_ids = ["76c64b38-25e9-484c-818c-365f15114c89"]
+parent = "8c880efc-7083-4e1d-bf06-96b8254be913"
+scope = "internal"
+slug = "memory-api/session-api/runtime-session-context"
+type = "specification"

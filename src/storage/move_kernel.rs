@@ -1287,6 +1287,53 @@ mod move_set_tests {
     }
 
     #[test]
+    fn plan_move_set_chunks_large_path_reference_scans() {
+        let (repo, source_ws, target_ws) = setup_repo();
+        let domain = FixtureDomain {
+            source_store_root: source_ws.join(".workflow-tools").join("fixture"),
+            fail_scan_number: Cell::new(None),
+            scan_calls: Cell::new(0),
+        };
+        let entity_ids = (0..384)
+            .map(|_| {
+                let entity_id = Uuid::new_v4();
+                make_entity(&domain.source_store_root, entity_id);
+                entity_id
+            })
+            .collect::<Vec<_>>();
+        let referenced_id = entity_ids[entity_ids.len() - 1];
+        let referenced_path = domain
+            .source_store_root
+            .join("entities")
+            .join(referenced_id.to_string());
+        fs::write(
+            repo.path().join("large-set-reference.txt"),
+            referenced_path.to_string_lossy().replace('\\', "/"),
+        )
+        .expect("write tracked path reference");
+        let status = Command::new("git")
+            .args(["add", "large-set-reference.txt"])
+            .current_dir(repo.path())
+            .status()
+            .expect("git add must run");
+        assert!(status.success(), "git add failed");
+
+        let set_plan = plan_move_set(&domain, &entity_ids, &target_ws)
+            .expect("large move set must plan");
+
+        assert!(set_plan.supported());
+        let referenced_plan = set_plan
+            .entity_plans
+            .iter()
+            .find(|plan| plan.entity_id == referenced_id)
+            .expect("referenced entity plan");
+        assert_eq!(
+            referenced_plan.path_reference_files,
+            vec![repo.path().join("large-set-reference.txt")]
+        );
+    }
+
+    #[test]
     fn plan_move_set_propagates_missing_source_blocker_per_entity() {
         let (_repo, source_ws, target_ws) = setup_repo();
         let domain = FixtureDomain {

@@ -1,0 +1,8 @@
+id = "09f96d83-4795-4f19-9259-64ad0d452387"
+created_at = "2026-06-03T00:44:43.394318500+00:00"
+title = "VS Code Copilot capture-hook session sync"
+state = "in-review"
+component = "session"
+scope = "internal"
+slug = "context-engine/session-api/vscode-copilot-capture-hook-sync"
+type = "specification"

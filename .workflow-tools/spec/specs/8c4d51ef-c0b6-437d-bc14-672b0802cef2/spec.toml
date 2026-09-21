@@ -1,0 +1,8 @@
+id = "8c4d51ef-c0b6-437d-bc14-672b0802cef2"
+created_at = "2026-05-25T11:49:40.709115500+00:00"
+title = "ticket-viewer: integrated ticket document and focused full-graph view"
+state = "draft"
+component = "ticket"
+scope = "public"
+slug = "ticket-viewer/detail-document-and-focused-graph"
+type = "specification"

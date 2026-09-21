@@ -94,6 +94,8 @@ pub(super) fn collect_plan_path_reference_files_for_set(
     target_store_root: &Path,
     subdir: &str,
 ) -> MovePathReferenceSet {
+    const GIT_GREP_PATTERN_CHUNK_SIZE: usize = 64;
+
     let mut result = MovePathReferenceSet::default();
     let mut repositories = vec![source_git_root];
     if source_git_root != target_git_root {
@@ -116,62 +118,65 @@ pub(super) fn collect_plan_path_reference_files_for_set(
             continue;
         }
 
-        let mut command = Command::new("git");
-        command.args([
-            "-C",
-            &git_root.to_string_lossy(),
-            "grep",
-            "-nF",
-            "--full-name",
-        ]);
-        for candidate in candidates.keys() {
-            command.args(["-e", candidate]);
-        }
-        command.arg("--");
-        let output = match command.output() {
-            Ok(output) => output,
-            Err(error) => {
+        let candidate_entries = candidates.iter().collect::<Vec<_>>();
+        for candidate_chunk in candidate_entries.chunks(GIT_GREP_PATTERN_CHUNK_SIZE) {
+            let mut command = Command::new("git");
+            command.args([
+                "-C",
+                &git_root.to_string_lossy(),
+                "grep",
+                "-nF",
+                "--full-name",
+            ]);
+            for (candidate, _) in candidate_chunk {
+                command.args(["-e", candidate]);
+            }
+            command.arg("--");
+            let output = match command.output() {
+                Ok(output) => output,
+                Err(error) => {
+                    result
+                        .blockers
+                        .push(MoveBlocker::PathReferenceScanUnavailable {
+                            reason: error.to_string(),
+                        });
+                    continue;
+                },
+            };
+            if !output.status.success() && output.status.code() != Some(1) {
                 result
                     .blockers
                     .push(MoveBlocker::PathReferenceScanUnavailable {
-                        reason: error.to_string(),
+                        reason: String::from_utf8_lossy(&output.stderr).trim().to_string(),
                     });
                 continue;
             }
-        };
-        if !output.status.success() && output.status.code() != Some(1) {
-            result
-                .blockers
-                .push(MoveBlocker::PathReferenceScanUnavailable {
-                    reason: String::from_utf8_lossy(&output.stderr).trim().to_string(),
-                });
-            continue;
-        }
 
-        for line in String::from_utf8_lossy(&output.stdout).lines() {
-            let Some((file, remainder)) = line.split_once(':') else {
-                continue;
-            };
-            let Some((_, content)) = remainder.split_once(':') else {
-                continue;
-            };
-            let candidate_file = git_root.join(file);
-            if !is_persistent_move_reference_file(
-                &candidate_file,
-                source_store_root,
-                target_store_root,
-                subdir,
-            ) {
-                continue;
-            }
-            for (candidate, entity_ids) in &candidates {
-                if content.contains(candidate) {
-                    for entity_id in entity_ids {
-                        result
-                            .files_by_entity
-                            .entry(*entity_id)
-                            .or_default()
-                            .push(candidate_file.clone());
+            for line in String::from_utf8_lossy(&output.stdout).lines() {
+                let Some((file, remainder)) = line.split_once(':') else {
+                    continue;
+                };
+                let Some((_, content)) = remainder.split_once(':') else {
+                    continue;
+                };
+                let candidate_file = git_root.join(file);
+                if !is_persistent_move_reference_file(
+                    &candidate_file,
+                    source_store_root,
+                    target_store_root,
+                    subdir,
+                ) {
+                    continue;
+                }
+                for (candidate, entity_ids) in candidate_chunk {
+                    if content.contains(*candidate) {
+                        for entity_id in *entity_ids {
+                            result
+                                .files_by_entity
+                                .entry(*entity_id)
+                                .or_default()
+                                .push(candidate_file.clone());
+                        }
                     }
                 }
             }

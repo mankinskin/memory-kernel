@@ -1,0 +1,8 @@
+id = "9e823b76-cd60-4689-b772-649ebb3a34a1"
+created_at = "2026-07-15T17:33:52.572084+00:00"
+title = "Structured browser result ingestion for test-api"
+state = "draft"
+component = "test"
+scope = "internal"
+slug = "test-api/browser-result-ingestion"
+type = "specification"

@@ -1,0 +1,8 @@
+id = "98b4f75d-3628-470d-a5cc-c91b6cc9811a"
+created_at = "2026-06-05T00:18:42.229418600+00:00"
+title = "ticket-viewer: graph focus, property-based rendering, and 2D presentation mode"
+state = "active"
+component = "ticket"
+scope = "public"
+slug = "ticket-viewer/graph-focus-property-rendering-and-2d-presentation"
+type = "specification"

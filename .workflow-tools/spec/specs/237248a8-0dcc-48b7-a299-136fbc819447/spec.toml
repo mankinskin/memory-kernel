@@ -1,0 +1,60 @@
+id = "237248a8-0dcc-48b7-a299-136fbc819447"
+created_at = "2026-09-12T13:04:11.742008900+00:00"
+title = "log-api v2 OperationJournal envelope contract"
+state = "draft"
+component = "workflow-tools"
+component_id = "log-api"
+contract_mode = "expectation-oriented"
+format_version = 2
+scope = "internal"
+slug = "log-api/operation-journal-contract"
+type = "specification"
+
+acceptance_criteria = [
+  { id = "ac-envelope-fidelity", expected_property_ids = ["prop-envelope-fidelity"], required_evidence_ids = ["ev-log-api-store-tests"], statement = "record_operation_journal/get_operation_journal round-trip the exercised OperationJournal fixture without loss; broader arbitrary-envelope fidelity requires additional multi-record evidence." },
+  { id = "ac-ownership-split", expected_property_ids = ["prop-ownership-split"], required_evidence_ids = ["ev-operation-journal-roundtrip-test"], statement = "memory-kernel is the only component that constructs or restores an OperationJournal for a move; log-api never mutates domain_data." },
+  { id = "ac-query-determinism", expected_property_ids = ["prop-query-determinism"], required_evidence_ids = ["ev-log-api-store-tests"], statement = "list_operation_journals filters by operation_kind in the current single-record test; component filtering, combined filters, and multi-record ordering require additional evidence." },
+  { id = "ac-spec-review-gate", expected_property_ids = ["prop-ownership-split"], required_evidence_ids = ["ev-spec-api-tests"], statement = "This spec passes spec_health and receives independent durable reviewer approval before W2-W4 tickets are created." },
+]
+
+code_refs = [
+  { description = "Shared OperationJournal envelope struct", file = "workflow-tools/memory-kernel/src/operation_journal.rs", kind = "struct", line_end = 31, line_start = 15, symbol = "OperationJournal" },
+  { description = "Projects a MoveJournal into the OperationJournal envelope", file = "workflow-tools/memory-kernel/src/operation_journal.rs", kind = "function", line_end = 154, line_start = 92, symbol = "OperationJournal::from_move_journal" },
+  { description = "Restores the legacy MoveJournal from domain_data", file = "workflow-tools/memory-kernel/src/operation_journal.rs", kind = "function", line_end = 172, line_start = 156, symbol = "OperationJournal::into_move_journal" },
+  { description = "Persists an OperationJournal envelope as opaque JSON", file = "workflow-tools/log/crates/log-api/src/store.rs", kind = "function", line_end = 160, line_start = 154, symbol = "LogStoreConfig::record_operation_journal" },
+  { description = "Reads an OperationJournal envelope by durable journal_id", file = "workflow-tools/log/crates/log-api/src/store.rs", kind = "function", line_end = 167, line_start = 163, symbol = "LogStoreConfig::get_operation_journal" },
+  { description = "Queries OperationJournal envelopes by operation_kind/component", file = "workflow-tools/log/crates/log-api/src/store.rs", kind = "function", line_end = 192, line_start = 171, symbol = "LogStoreConfig::list_operation_journals" },
+]
+
+criteria = [
+  { criterion_id = "log-api-crit-envelope-fidelity", owner_component_id = "log-api", statement = "record_operation_journal and get_operation_journal preserve the exercised fixture; broader arbitrary-envelope fidelity is not independently evidenced.", measurement = "JSON round-trip equality assertion in log-api store tests", evidence_ids = ["ev-log-api-store-tests"] },
+  { criterion_id = "log-api-crit-no-domain-mutation", owner_component_id = "log-api", statement = "log-api only persists and queries opaque OperationJournal envelopes and never mutates domain_data.", measurement = "Code review of LogStoreConfig operation-journal methods", evidence_ids = ["ev-log-api-store-tests"] },
+  { criterion_id = "memory-kernel-crit-recovery-ownership", owner_component_id = "memory-kernel", statement = "memory-kernel owns MoveJournal mutation, phase transitions, and recovery guidance.", measurement = "Projection round-trip test", evidence_ids = ["ev-operation-journal-roundtrip-test"] },
+  { criterion_id = "log-api-crit-query-filter", owner_component_id = "log-api", statement = "list_operation_journals filters by operation_kind in the current test; broader filter and ordering coverage is pending.", measurement = "Query filter unit test", evidence_ids = ["ev-log-api-store-tests"] },
+]
+
+evidence = [
+  { evidence_id = "ev-log-api-store-tests", kind = "test", target = "workflow-tools/log/crates/log-api/src/store_tests.rs", description = "Operation-journal record/get/list round-trip and operation_kind query-filter coverage" },
+  { evidence_id = "ev-operation-journal-roundtrip-test", kind = "test", target = "workflow-tools/memory-kernel/src/operation_journal.rs#move_journal_projection_round_trips_recovery_data", description = "Projection from MoveJournal to OperationJournal and back preserves recovery data" },
+  { evidence_id = "ev-spec-api-tests", kind = "test", target = "cargo test --manifest-path workflow-tools/spec/crates/spec-api/Cargo.toml", description = "Manifest v2 parsing and spec_health coverage" },
+]
+
+evidence_requirements = [
+  { id = "ev-log-api-store-tests", kind = "test", description = "The current test persists and reads one OperationJournal fixture and filters by operation_kind alone.", optional = false },
+  { id = "ev-operation-journal-roundtrip-test", kind = "test", description = "The projection round-trip test preserves recovery fields.", optional = false },
+  { id = "ev-spec-api-tests", kind = "test", description = "Spec-api manifest v2 parsing and health-check coverage.", optional = false },
+]
+
+expected_properties = [
+  { id = "prop-envelope-fidelity", statement = "OperationJournal envelopes persisted through log-api round-trip every field without loss." },
+  { id = "prop-ownership-split", statement = "memory-kernel owns MoveJournal mutation/phase/recovery; log-api owns opaque persistence/query only." },
+  { id = "prop-query-determinism", statement = "list_operation_journals filters by operation_kind/component and returns deterministically sorted results." },
+]
+
+fulfillment_summaries = [
+  { id = "fs-ev-log-api-store-tests", subject_kind = "evidence-requirement", subject_id = "ev-log-api-store-tests", status = "satisfied", detail = "The current test covers one OperationJournal envelope and operation_kind-only filtering." },
+  { id = "fs-ev-operation-journal-roundtrip-test", subject_kind = "evidence-requirement", subject_id = "ev-operation-journal-roundtrip-test", status = "satisfied", detail = "Projection and restoration preserve recovery data." },
+  { id = "fs-ev-spec-api-tests", subject_kind = "evidence-requirement", subject_id = "ev-spec-api-tests", status = "satisfied", detail = "Spec manifest v2 parsing and health-check coverage is satisfied." },
+]
+
+outward_contract_edges = [{ edge_id = "edge-log-api-consumes-operation-journal-envelope", name = "operation-journal-envelope-type", consumer_component_id = "log-api", provider_component_id = "memory-kernel", criterion_ids = ["log-api-crit-envelope-fidelity", "memory-kernel-crit-recovery-ownership"] }]

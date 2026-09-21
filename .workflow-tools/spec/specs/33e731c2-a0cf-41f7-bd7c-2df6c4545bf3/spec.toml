@@ -1,0 +1,8 @@
+id = "33e731c2-a0cf-41f7-bd7c-2df6c4545bf3"
+created_at = "2026-05-12T17:35:14.053422900+00:00"
+title = "ticket-viewer: explorer interactions"
+state = "draft"
+component = "ticket"
+scope = "component"
+slug = "ticket-viewer/explorer"
+type = "specification"

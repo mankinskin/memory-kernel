@@ -1,0 +1,4 @@
+# Follow-up implementation
+
+- [8f364a0c Structured subprocess result adapter and artifact provenance](memory-api/.ticket/tickets/8f364a0c-35ab-4faa-b49a-20d98b6f2905/ticket.toml) owns the generic adapter, result-envelope schema, retry and capability mapping, and typed provenance/artifact extensions not covered by the first-batch viewer tickets.
+- It depends on [93b8a331 Browser and TypeScript automated test integration strategy](memory-api/.ticket/tickets/93b8a331-da80-4fef-b13d-7f277cadb15f/ticket.toml) and is a `depends_on` child of [956485ad Robust browser, observability, and performance validation strategy](memory-viewers/.ticket/tickets/956485ad-2e80-4a4c-b5ec-42bac2c7c295/ticket.toml).

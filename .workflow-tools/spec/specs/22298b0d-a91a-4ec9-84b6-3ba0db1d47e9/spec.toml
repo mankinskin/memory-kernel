@@ -1,0 +1,10 @@
+id = "22298b0d-a91a-4ec9-84b6-3ba0db1d47e9"
+created_at = "2026-08-11T15:39:45.738771Z"
+title = "Session worktree positional discovery"
+state = "draft"
+component = "session"
+scope = "internal"
+slug = "context-engine/session-api/session-worktree-positional-discovery"
+type = "specification"
+parent_id = "2860a8db-0c4e-4e94-984a-c10a72a67ffc"
+ticket_ids = ["99e040a2-f7fb-40cf-8714-2bc487076d72", "db6980d1-38bf-4819-8c07-b6db09229c1c", "674e8e44-55ee-472f-8044-5d6e473438cf", "3d535b2c-7361-4f08-bfb4-63b0b3174afc", "ff83caf7-059b-4f2e-a0fb-eaa7757096a8", "5e6cf4f8-120c-4674-95de-d7b79c99f5b3"]
