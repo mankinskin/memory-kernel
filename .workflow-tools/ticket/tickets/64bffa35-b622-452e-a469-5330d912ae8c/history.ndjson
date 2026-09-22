@@ -1,0 +1,1 @@
+{"rev":1,"ts":"2026-06-24T12:53:22.547610500+00:00","fields":{"component":"memory-index","effort":"3800","priority":"high","state":"open","title":"[memory-index] Generic rendering abstraction: trait-based IndexEntryFormatter for all domains","type":"tracker-improvement"}}

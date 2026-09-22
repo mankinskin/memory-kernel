@@ -1,0 +1,11 @@
+id = "a9a18a7d-9eb3-41bf-b697-1e1418641908"
+created_at = "2026-08-26T01:33:16.821700300+00:00"
+title = "[workflow-tools][stores] Add canonical namespace resolver and discovery"
+state = "done"
+component = "memory-kernel"
+effort = "1400"
+parts = [{ id = "4b6f071b-c123-4cf4-8f85-a254416531f8", kind = "objective", path = "parts/4b6f071b-c123-4cf4-8f85-a254416531f8.md", frozen = true, created_at = "2026-08-26T01:34:14.441851700Z" }, { id = "99d06d3c-4e81-479e-9399-81194f49d73f", kind = "design", path = "parts/99d06d3c-4e81-479e-9399-81194f49d73f.md", frozen = true, created_at = "2026-08-26T01:34:14.483228200Z" }, { id = "7c45f814-c872-40f3-a19a-46a8660a9293", kind = "acceptance_criteria", path = "parts/7c45f814-c872-40f3-a19a-46a8660a9293.md", frozen = true, created_at = "2026-08-26T01:34:14.522485200Z" }, { id = "624dba5b-a88f-4dd7-a7c1-907d6337caaf", kind = "requirements", path = "parts/624dba5b-a88f-4dd7-a7c1-907d6337caaf.md", frozen = true, created_at = "2026-08-26T01:39:50.243134500Z" }, { id = "6829ff3a-02e9-486c-a4d7-5151015ed5e7", kind = "examples", path = "parts/6829ff3a-02e9-486c-a4d7-5151015ed5e7.md", frozen = true, created_at = "2026-08-26T01:43:28.253711400Z" }, { id = "a1b2c3d4-1111-4a11-8a11-a9a18a7d0001", kind = "amendment", path = "parts/a1b2c3d4-1111-4a11-8a11-a9a18a7d0001.md", frozen = false, created_at = "2026-08-26T11:43:13.763753900Z", supersedes = "624dba5b-a88f-4dd7-a7c1-907d6337caaf" }, { id = "ee7f7634-a508-4fb2-8c71-ec72a5d121bb", kind = "review", path = "parts/ee7f7634-a508-4fb2-8c71-ec72a5d121bb.md", frozen = false, created_at = "2026-08-26T12:25:09.411527400Z" }]
+plan_revision = 2
+priority = "high"
+risk_level = "high"
+type = "task"

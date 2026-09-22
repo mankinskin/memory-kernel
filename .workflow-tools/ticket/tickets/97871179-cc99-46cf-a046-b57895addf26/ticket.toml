@@ -1,0 +1,8 @@
+id = "97871179-cc99-46cf-a046-b57895addf26"
+created_at = "2026-09-15T14:47:41.848243600+00:00"
+title = "Implement Entity Kernel migration protocol"
+state = "done"
+parts = [{ id = "7ebb7f8c-70f8-4e20-866d-16c00ee08b53", kind = "objective", path = "parts/7ebb7f8c-70f8-4e20-866d-16c00ee08b53.md", frozen = true, created_at = "2026-09-15T14:48:08.271678600Z" }, { id = "e7019f57-57aa-4e57-aa53-7bf725c64b63", kind = "requirements", path = "parts/e7019f57-57aa-4e57-aa53-7bf725c64b63.md", frozen = true, created_at = "2026-09-15T14:48:08.272041500Z" }, { id = "1cd91d58-fb3d-4bdd-a2e5-fdfc6dab5621", kind = "design", path = "parts/1cd91d58-fb3d-4bdd-a2e5-fdfc6dab5621.md", frozen = true, created_at = "2026-09-15T14:48:08.272403600Z" }, { id = "d1cb5462-cc3b-4ea8-b450-5b1ccbecd4f4", kind = "examples", path = "parts/d1cb5462-cc3b-4ea8-b450-5b1ccbecd4f4.md", frozen = true, created_at = "2026-09-15T14:48:08.272595900Z" }, { id = "0f0c08fe-0693-40e5-9601-28f9d1dc395b", kind = "acceptance_criteria", path = "parts/0f0c08fe-0693-40e5-9601-28f9d1dc395b.md", frozen = true, created_at = "2026-09-15T14:48:08.272762800Z" }]
+plan_revision = 1
+type = "task"
+component = "memory-kernel"

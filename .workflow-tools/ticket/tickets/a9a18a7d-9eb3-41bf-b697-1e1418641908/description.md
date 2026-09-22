@@ -1,0 +1,1 @@
+Foundation task for the consolidated entity-store namespace. It introduces canonical and legacy resolution, ambiguity protection, deprecation diagnostics, and recursive discovery support in memory-kernel.

@@ -1,0 +1,8 @@
+id = "5d33bbc8-8d20-4ec3-82bd-a2d0adf05ae6"
+created_at = "2026-09-15T14:44:17.897461800+00:00"
+title = "Implement Entity Kernel schema versioning"
+state = "done"
+parts = [{ id = "34e257ad-9187-45ff-bc97-73b7ef437a03", kind = "objective", path = "parts/34e257ad-9187-45ff-bc97-73b7ef437a03.md", frozen = true, created_at = "2026-09-15T14:44:39.155688800Z" }, { id = "ea3eadda-ad40-490f-b86c-e57f6106c2f6", kind = "requirements", path = "parts/ea3eadda-ad40-490f-b86c-e57f6106c2f6.md", frozen = true, created_at = "2026-09-15T14:44:39.155849Z" }, { id = "2b227036-de29-4e55-803d-6edf5ee44ba7", kind = "design", path = "parts/2b227036-de29-4e55-803d-6edf5ee44ba7.md", frozen = true, created_at = "2026-09-15T14:44:39.156980900Z" }, { id = "b62b901a-aa14-4f7b-828f-d5d0844ceab1", kind = "examples", path = "parts/b62b901a-aa14-4f7b-828f-d5d0844ceab1.md", frozen = true, created_at = "2026-09-15T14:44:39.157174700Z" }, { id = "e023e9d9-45f8-439e-a39d-c513a44060df", kind = "acceptance_criteria", path = "parts/e023e9d9-45f8-439e-a39d-c513a44060df.md", frozen = true, created_at = "2026-09-15T14:44:39.157314200Z" }]
+plan_revision = 1
+type = "task"
+component = "memory-kernel"

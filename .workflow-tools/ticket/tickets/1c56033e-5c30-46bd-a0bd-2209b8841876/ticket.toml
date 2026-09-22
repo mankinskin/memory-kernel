@@ -1,0 +1,9 @@
+id = "1c56033e-5c30-46bd-a0bd-2209b8841876"
+created_at = "2026-07-04T06:07:07.398345300+00:00"
+title = "[observability][contract] Publish canonical profiling/tracing phase taxonomy"
+state = "done"
+component = "memory-kernel"
+effort = "1k tokens"
+parts = [{ id = "6f352b8b-b69a-4d7a-be72-a5d9de054fa4", kind = "objective", path = "parts/6f352b8b-b69a-4d7a-be72-a5d9de054fa4.md", frozen = false, created_at = "2026-07-30T21:02:28.877516500Z" }, { id = "4a16054e-58f3-4a6b-a5b5-703e10675f40", kind = "validation", path = "parts/4a16054e-58f3-4a6b-a5b5-703e10675f40.md", frozen = false, created_at = "2026-07-30T21:02:28.881648100Z" }, { id = "f8718600-6ee1-45ee-b443-5892be046a22", kind = "objective", path = "parts/f8718600-6ee1-45ee-b443-5892be046a22.md", frozen = false, created_at = "2026-07-30T21:02:28.885766100Z" }]
+priority = "high"
+type = "tracker-improvement"

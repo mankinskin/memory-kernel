@@ -1,0 +1,6 @@
+id = "0b27f9a0-1147-4df0-9586-8ccdbd1d04fa"
+created_at = "2026-09-04T12:47:08.366110500+00:00"
+title = "Implement test transfer contract"
+state = "planning"
+type = "task"
+component = "memory-kernel"
