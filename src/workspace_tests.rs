@@ -242,6 +242,22 @@ fn consumer_resolver_rejects_ambiguous_superproject() {
 }
 
 #[test]
+fn consumer_resolver_prefers_current_workspace_store_over_descendants() {
+    let dir = tempdir().unwrap();
+    let workspace = dir.path().join("meta-workspace");
+    let demo = workspace.join("minimal-demo");
+    let example = workspace.join("context-engine");
+    std::fs::create_dir_all(canonical_store_root(&workspace, ".session")).unwrap();
+    std::fs::create_dir_all(canonical_store_root(&demo, ".session")).unwrap();
+    std::fs::create_dir_all(canonical_store_root(&example, ".session")).unwrap();
+
+    let resolved =
+        resolve_consumer_store_root_from(None, None, None, Some(&workspace), ".session").unwrap();
+
+    assert_eq!(resolved, canonical_store_root(&workspace, ".session"));
+}
+
+#[test]
 fn consumer_resolver_allows_explicit_consumer_workspace() {
     let dir = tempdir().unwrap();
     let superproject = dir.path().join("meta-workspace");

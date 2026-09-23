@@ -534,8 +534,9 @@ pub fn resolve_consumer_store_root(
 /// from a superproject directory.
 ///
 /// Explicit store, workspace, and environment selections preserve the existing
-/// precedence order. An ambient invocation is valid only when the current
-/// directory has its own store or contains at most one descendant store.
+/// precedence order. An ambient invocation first uses the local workspace
+/// store discovered from the current directory. Without a local store, the
+/// current directory may contain at most one descendant store.
 pub fn resolve_consumer_store_root_from(
     explicit_store_root: Option<&Path>,
     explicit_workspace_root: Option<&Path>,
@@ -559,6 +560,15 @@ pub fn resolve_consumer_store_root_from(
     let Some(cwd) = cwd else {
         return Ok(PathBuf::from(dir_name));
     };
+    if find_local_root_from(cwd, dir_name).is_some() {
+        return Ok(resolve_requested_store_root_from(
+            None,
+            None,
+            None,
+            Some(cwd),
+            dir_name,
+        ));
+    }
     let workspace = normalize_working_dir_path(start_dir(cwd));
     let stores = find_descendant_store_roots_from(&workspace, dir_name);
     if stores.len() > 1 {
