@@ -202,6 +202,18 @@ pub trait MoveDomain {
     /// Whether the destination store exists at `target_store_root`.
     fn target_store_present(&self, target_store_root: &Path) -> MoveResult<bool>;
 
+    /// Whether execution may initialize a missing canonical destination store.
+    fn can_initialize_target_store(&self) -> bool {
+        false
+    }
+
+    /// Initialize a missing canonical destination store before execution.
+    fn initialize_target_store(&self, _target_store_root: &Path) -> MoveResult<()> {
+        Err(MoveError::Domain(
+            "destination store initialization is not supported by this domain".to_string(),
+        ))
+    }
+
     /// Whether `entity_id` is indexed by the store rooted at `store_root`.
     fn entity_indexed_in(&self, store_root: &Path, entity_id: &Uuid) -> MoveResult<bool>;
 

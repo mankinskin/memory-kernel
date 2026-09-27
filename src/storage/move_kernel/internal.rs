@@ -141,7 +141,7 @@ pub(super) fn collect_plan_path_reference_files_for_set(
                             reason: error.to_string(),
                         });
                     continue;
-                },
+                }
             };
             if !output.status.success() && output.status.code() != Some(1) {
                 result

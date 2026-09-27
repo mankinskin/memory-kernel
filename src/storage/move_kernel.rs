@@ -105,7 +105,7 @@ pub fn plan_move<D: MoveDomain + ?Sized>(
     }
 
     let target_store_present = domain.target_store_present(&target_store_root)?;
-    if !target_store_present {
+    if !target_store_present && !domain.can_initialize_target_store() {
         blockers.push(MoveBlocker::MissingTargetStore {
             target_store_root: target_store_root.clone(),
         });
@@ -352,7 +352,7 @@ fn build_entity_plan_with_shared_context<D: MoveDomain + ?Sized>(
             target_worktree_root: target_git_root.to_path_buf(),
         });
     }
-    if !target_store_present {
+    if !target_store_present && !domain.can_initialize_target_store() {
         blockers.push(MoveBlocker::MissingTargetStore {
             target_store_root: target_store_root.to_path_buf(),
         });
@@ -436,6 +436,9 @@ pub fn execute_move<D: MoveDomain + ?Sized>(
         return Err(MoveError::Domain(
             "move preflight contains blockers".to_string(),
         ));
+    }
+    if !domain.target_store_present(&plan.target_store_root)? {
+        domain.initialize_target_store(&plan.target_store_root)?;
     }
     execute_or_resume(domain, plan, None, None, false, false, false, false)
 }
@@ -917,6 +920,9 @@ fn execute_move_set_journal<D: MoveDomain + ?Sized>(
     journal: &mut MoveSetJournal,
     resumed: bool,
 ) -> MoveResult<MoveSetOutcome> {
+    if !domain.target_store_present(&journal.target_store_root)? {
+        domain.initialize_target_store(&journal.target_store_root)?;
+    }
     acquire_lock_set(&journal.lock_paths)?;
     journal.phase = MoveSetExecutionPhase::InProgress;
     journal.updated_at = Utc::now();
@@ -1186,8 +1192,13 @@ mod move_set_tests {
         init_git_repo(repo.path());
         let source_ws = repo.path().join("source");
         let target_ws = repo.path().join("target");
-        fs::create_dir_all(source_ws.join(".workflow-tools").join("fixture").join("entities"))
-            .expect("create source store");
+        fs::create_dir_all(
+            source_ws
+                .join(".workflow-tools")
+                .join("fixture")
+                .join("entities"),
+        )
+        .expect("create source store");
         fs::create_dir_all(target_ws.join(".workflow-tools").join("fixture"))
             .expect("create target store");
         (repo, source_ws, target_ws)
@@ -1318,8 +1329,8 @@ mod move_set_tests {
             .expect("git add must run");
         assert!(status.success(), "git add failed");
 
-        let set_plan = plan_move_set(&domain, &entity_ids, &target_ws)
-            .expect("large move set must plan");
+        let set_plan =
+            plan_move_set(&domain, &entity_ids, &target_ws).expect("large move set must plan");
 
         assert!(set_plan.supported());
         let referenced_plan = set_plan

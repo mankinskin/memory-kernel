@@ -90,6 +90,66 @@ fn resolve_store_root_from_preserves_non_workspace_directory() {
 }
 
 #[test]
+fn resolve_explicit_store_root_from_does_not_use_parent_store() {
+    let dir = tempdir().unwrap();
+    let parent = dir.path().join("parent-workspace");
+    let child = parent.join("child-workspace");
+    std::fs::create_dir_all(canonical_store_root(&parent, ".spec")).unwrap();
+    std::fs::create_dir_all(&child).unwrap();
+
+    let resolution = resolve_explicit_store_root_from(&child, ".spec");
+
+    assert_eq!(resolution.store_root, canonical_store_root(&child, ".spec"));
+    assert!(resolution.diagnostics.is_empty());
+}
+
+#[test]
+fn resolve_explicit_store_root_from_preserves_store_paths() {
+    let dir = tempdir().unwrap();
+    let store = canonical_store_root(dir.path(), ".spec");
+    let nested = store.join("specs");
+    std::fs::create_dir_all(&nested).unwrap();
+
+    let direct = resolve_explicit_store_root_from(&store, ".spec");
+    let nested_resolution = resolve_explicit_store_root_from(&nested, ".spec");
+
+    assert_eq!(direct.store_root, store);
+    assert_eq!(nested_resolution.store_root, store);
+}
+
+#[test]
+fn resolve_explicit_store_root_from_reports_both_spec_layouts() {
+    let dir = tempdir().unwrap();
+    let canonical = canonical_store_root(dir.path(), ".spec");
+    let legacy = dir.path().join(".spec");
+    std::fs::create_dir_all(&canonical).unwrap();
+    std::fs::create_dir_all(&legacy).unwrap();
+
+    let resolution = resolve_explicit_store_root_from(dir.path(), ".spec");
+
+    assert_eq!(resolution.store_root, canonical);
+    assert!(matches!(
+        resolution.diagnostics.as_slice(),
+        [StoreRootDiagnostic::BothLayoutsPresent { .. }]
+    ));
+}
+
+#[test]
+fn resolve_explicit_store_root_from_reports_legacy_spec_layout() {
+    let dir = tempdir().unwrap();
+    let legacy = dir.path().join(".spec");
+    std::fs::create_dir_all(&legacy).unwrap();
+
+    let resolution = resolve_explicit_store_root_from(dir.path(), ".spec");
+
+    assert_eq!(resolution.store_root, legacy);
+    assert!(matches!(
+        resolution.diagnostics.as_slice(),
+        [StoreRootDiagnostic::LegacyStore { .. }]
+    ));
+}
+
+#[test]
 fn store_layout_resolution_covers_every_registered_domain() {
     for (legacy_name, _) in STORE_MARKERS {
         let domain = legacy_name.trim_start_matches('.');

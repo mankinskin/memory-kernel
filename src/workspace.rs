@@ -397,6 +397,30 @@ pub fn resolve_store_root_from_with_diagnostics(
     }
 }
 
+/// Resolve an explicit workspace without searching sibling or ancestor
+/// workspaces for a store. Paths already inside a store resolve to that store.
+pub fn resolve_explicit_store_root_from(
+    start: &Path,
+    dir_name: &str,
+) -> StoreRootResolution {
+    let normalized = normalize_working_dir_path(start);
+    let mut candidate = normalized.as_path();
+    loop {
+        if is_store_root(candidate, dir_name) {
+            return StoreRootResolution {
+                store_root: candidate.to_path_buf(),
+                diagnostics: Vec::new(),
+            };
+        }
+        match candidate.parent() {
+            Some(parent) => candidate = parent,
+            None => break,
+        }
+    }
+
+    resolve_explicit_store_root_at_workspace(&normalized, dir_name)
+}
+
 pub fn resolve_requested_store_root(
     explicit_store_root: Option<&Path>,
     explicit_workspace_root: Option<&Path>,
@@ -997,6 +1021,45 @@ fn resolve_store_root_at_workspace(workspace: &Path, dir_name: &str) -> StoreRoo
         }],
         _ => Vec::new(),
     };
+    StoreRootResolution {
+        store_root: if canonical_exists {
+            canonical_path
+        } else if legacy_exists {
+            legacy_path
+        } else {
+            canonical_path
+        },
+        diagnostics,
+    }
+}
+
+fn resolve_explicit_store_root_at_workspace(
+    workspace: &Path,
+    dir_name: &str,
+) -> StoreRootResolution {
+    if dir_name != ".spec" {
+        return resolve_store_root_at_workspace(workspace, dir_name);
+    }
+
+    let canonical_path = canonical_store_root(workspace, dir_name);
+    let legacy_path = workspace.join(dir_name);
+    let canonical_exists = canonical_path.is_dir();
+    let legacy_exists = legacy_path.is_dir();
+    let domain = store_domain(dir_name).to_string();
+    let diagnostics = match (canonical_exists, legacy_exists) {
+        (true, true) => vec![StoreRootDiagnostic::BothLayoutsPresent {
+            domain,
+            legacy_path: legacy_path.clone(),
+            canonical_path: canonical_path.clone(),
+        }],
+        (false, true) => vec![StoreRootDiagnostic::LegacyStore {
+            domain,
+            legacy_path: legacy_path.clone(),
+            canonical_path: canonical_path.clone(),
+        }],
+        _ => Vec::new(),
+    };
+
     StoreRootResolution {
         store_root: if canonical_exists {
             canonical_path
