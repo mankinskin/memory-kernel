@@ -1,0 +1,7 @@
+A stored cross-store reference (e.g. a Ticket's `TicketRef`/`SpecRef`) carries the `workspace` and `store_root` of the entity it points at — its **owner workspace** — which is independent of whichever `local_workspace` the current validating call was invoked from. A relative `store_root` on a stored reference must resolve against its own recorded owner workspace, not against the caller's `local_workspace`, so that link validation returns the same target and classification whether invoked from an aggregate root or a nested root.
+
+This distinction is the fix required for the reproduced Ticket link-validator discrepancy (see `ARTIFACTS.md#reproduced-validation-discrepancy`): aggregate-root and nested-root invocations checked the same 9 references but disagreed on `wrong_store_ref` classification because the validator resolved a relative `store_root` against the caller's `local_workspace` instead of the reference's recorded owner workspace.
+
+Observable criteria:
+- Two validator invocations from different `local_workspace` roots (aggregate vs. nested) against the same stored reference set return identical target IDs and the same `wrong_store_ref`/valid classification for every reference.
+- Resolving a reference's owner workspace never mutates the reference's stored `workspace`/`store_root` fields; classification is a read-time computation only.

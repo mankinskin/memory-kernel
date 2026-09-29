@@ -1,0 +1,5 @@
+`parent_workspace` (ancestor directories above the selected `local_workspace`) and `global_workspace` (descendant/sibling stores discovered under policy) are discovery contexts for read and search only. Discovering a parent or descendant store never re-anchors the write base: a create or write operation always targets the canonical store under the original `local_workspace`, even when discovery finds an existing store elsewhere.
+
+Observable criteria:
+- `discover_workspace_scan_roots_with_policy` returns additional scan roots for reads (ancestors gated by `include_ancestors` and `deny_external_paths`; descendants gated by `include_descendants`), but the caller's `local_workspace` root is always included and is the only root a subsequent write targets.
+- `find_local_root_from`'s upward walk locates the nearest existing store for read compatibility; it must not be used to select the target of a create/write call.

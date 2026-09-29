@@ -1,0 +1,5 @@
+Every domain store's canonical location is `<local_workspace>/.workflow-tools/<domain>`, derived deterministically by `canonical_store_root`. A store-initialization or write path (`resolve_store_root_for_initialization_from`) always targets this canonical path and never falls back to a legacy bare `<dir_name>` layout. A read path (`resolve_store_root_from_with_diagnostics`, `resolve_store_root_at_fixed_workspace`) may still resolve an existing legacy layout for backward compatibility and reports a `StoreRootDiagnostic` when a legacy and canonical layout are both present.
+
+Observable criteria:
+- Creating a new record in any domain (Ticket, Spec, Test, Session, Feedback, Audit, Log) at a `local_workspace` with no existing store lands under `.workflow-tools/<domain>`, never under a bare `.<domain>` sibling.
+- An existing legacy store is still readable, and its presence alongside a canonical store surfaces as `BothLayoutsPresent`, not a silent preference for one over the other.

@@ -1,0 +1,17 @@
+{
+  "id": "val-memory-kernel-workspace-resolution",
+  "title": "Memory-kernel workspace resolution contract tests",
+  "command": "cargo test --manifest-path workflow-tools/memory-kernel/Cargo.toml",
+  "detail": "Guards the shared workspace resolver contract: explicit selector validation, deterministic canonical store derivation, fixed-workspace resolution, and discovery behavior. Creator-path conformance, reference-owner parity, and persisted cross-domain read-back remain separate workspace Spec criteria.",
+  "slow_threshold_ms": 300000,
+  "links": {
+    "spec_ids": [
+      "ae5ef697-0ee5-4f74-9dca-2cb268290dae"
+    ],
+    "acceptance_criterion_ids": [
+      "workspace-selector",
+      "canonical-store-root",
+      "discovery-write-base"
+    ]
+  }
+}
