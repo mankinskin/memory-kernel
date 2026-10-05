@@ -58,6 +58,32 @@ impl std::fmt::Display for InvalidWorkspaceSelector {
 
 impl std::error::Error for InvalidWorkspaceSelector {}
 
+#[derive(Debug)]
+pub enum WorkspaceSelectorNormalizationError {
+    Invalid(InvalidWorkspaceSelector),
+    CurrentDirectory(std::io::Error),
+}
+
+impl std::fmt::Display for WorkspaceSelectorNormalizationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Invalid(error) => error.fmt(f),
+            Self::CurrentDirectory(error) => {
+                write!(f, "failed to resolve current workspace: {error}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for WorkspaceSelectorNormalizationError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Invalid(error) => Some(error),
+            Self::CurrentDirectory(error) => Some(error),
+        }
+    }
+}
+
 pub fn validate_explicit_workspace_selector(
     workspace: Option<&str>,
 ) -> Result<&str, InvalidWorkspaceSelector> {
@@ -73,6 +99,20 @@ pub fn validate_explicit_workspace_selector(
         });
     }
     Ok(trimmed)
+}
+
+pub fn normalize_explicit_workspace_selector(
+    workspace: Option<&str>,
+) -> Result<PathBuf, WorkspaceSelectorNormalizationError> {
+    let selector = validate_explicit_workspace_selector(workspace)
+        .map_err(WorkspaceSelectorNormalizationError::Invalid)?;
+    if selector == "." {
+        std::env::current_dir()
+            .map(|path| normalize_working_dir_path(&path))
+            .map_err(WorkspaceSelectorNormalizationError::CurrentDirectory)
+    } else {
+        Ok(PathBuf::from(selector))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

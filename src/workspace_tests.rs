@@ -37,6 +37,49 @@ fn explicit_workspace_selector_accepts_current_directory() {
 }
 
 #[test]
+fn explicit_workspace_selector_normalizes_current_directory() {
+    let current_dir = std::env::current_dir().unwrap();
+
+    for selector in [".", "  .  "] {
+        assert_eq!(
+            normalize_explicit_workspace_selector(Some(selector)).unwrap(),
+            normalize_working_dir_path(&current_dir)
+        );
+    }
+}
+
+#[test]
+fn explicit_workspace_normalization_rejects_ambient_aliases() {
+    for selector in [None, Some(""), Some("  "), Some("default"), Some("..")] {
+        let error = normalize_explicit_workspace_selector(selector).unwrap_err();
+
+        assert!(matches!(
+            error,
+            WorkspaceSelectorNormalizationError::Invalid(_)
+        ));
+        assert!(
+            error
+                .to_string()
+                .contains("requires an explicit workspace path")
+        );
+        assert!(std::error::Error::source(&error).is_some());
+    }
+}
+
+#[test]
+fn explicit_workspace_normalization_preserves_concrete_paths_without_initializing() {
+    let dir = tempdir().unwrap();
+    let workspace = dir.path().join("not-created");
+    let selector = workspace.to_str().unwrap();
+
+    assert_eq!(
+        normalize_explicit_workspace_selector(Some(selector)).unwrap(),
+        workspace
+    );
+    assert!(!workspace.exists());
+}
+
+#[test]
 fn explicit_legacy_store_write_path_is_rejected_regardless_of_existence() {
     for exists in [false, true] {
         let dir = tempdir().unwrap();
