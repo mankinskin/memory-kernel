@@ -75,6 +75,36 @@ pub fn validate_explicit_workspace_selector(
     Ok(trimmed)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LegacyStoreWriteOverride {
+    path: PathBuf,
+}
+
+impl std::fmt::Display for LegacyStoreWriteOverride {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "explicit legacy store path '{}' is not allowed for writes; select its workspace root or a canonical `.workflow-tools` store",
+            self.path.display()
+        )
+    }
+}
+
+impl std::error::Error for LegacyStoreWriteOverride {}
+
+pub fn validate_explicit_store_root_for_write(
+    path: &Path,
+    dir_name: &str,
+) -> Result<(), LegacyStoreWriteOverride> {
+    let normalized = normalize_working_dir_path(path);
+    if normalized.ancestors().any(|ancestor| {
+        ancestor.file_name().and_then(|name| name.to_str()) == Some(dir_name)
+    }) {
+        return Err(LegacyStoreWriteOverride { path: normalized });
+    }
+    Ok(())
+}
+
 #[derive(Debug)]
 pub enum WorkspacePathError {
     CanonicalizeFailed {
@@ -407,10 +437,8 @@ pub fn resolve_explicit_store_root_from(
     let mut candidate = normalized.as_path();
     loop {
         if is_store_root(candidate, dir_name) {
-            return StoreRootResolution {
-                store_root: candidate.to_path_buf(),
-                diagnostics: Vec::new(),
-            };
+            let workspace = resolve_workspace_root_from_store_root(candidate, dir_name);
+            return resolve_explicit_store_root_at_workspace(&workspace, dir_name);
         }
         match candidate.parent() {
             Some(parent) => candidate = parent,

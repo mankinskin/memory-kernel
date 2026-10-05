@@ -37,6 +37,41 @@ fn explicit_workspace_selector_accepts_current_directory() {
 }
 
 #[test]
+fn explicit_legacy_store_write_path_is_rejected_regardless_of_existence() {
+    for exists in [false, true] {
+        let dir = tempdir().unwrap();
+        let legacy = dir.path().join(".test");
+        if exists {
+            std::fs::create_dir_all(&legacy).unwrap();
+        }
+
+        let error = validate_explicit_store_root_for_write(&legacy, ".test")
+            .unwrap_err();
+
+        assert!(error.to_string().contains("not allowed for writes"));
+        assert_eq!(error.path, legacy);
+    }
+
+    let dir = tempdir().unwrap();
+    for (path, dir_name) in [
+        (dir.path().join(".ticket"), ".ticket"),
+        (dir.path().join(".test").join("specs"), ".test"),
+    ] {
+        assert!(
+            validate_explicit_store_root_for_write(&path, dir_name).is_err()
+        );
+    }
+}
+
+#[test]
+fn explicit_canonical_store_write_path_is_allowed() {
+    let dir = tempdir().unwrap();
+    let canonical = canonical_store_root(dir.path(), ".test");
+
+    assert!(validate_explicit_store_root_for_write(&canonical, ".test").is_ok());
+}
+
+#[test]
 fn resolve_local_root_from_defaults_to_start_directory() {
     let dir = tempdir().unwrap();
     let repo = dir.path().join("repo");
@@ -126,6 +161,23 @@ fn resolve_explicit_store_root_from_reports_both_spec_layouts() {
     std::fs::create_dir_all(&legacy).unwrap();
 
     let resolution = resolve_explicit_store_root_from(dir.path(), ".spec");
+
+    assert_eq!(resolution.store_root, canonical);
+    assert!(matches!(
+        resolution.diagnostics.as_slice(),
+        [StoreRootDiagnostic::BothLayoutsPresent { .. }]
+    ));
+}
+
+#[test]
+fn resolve_explicit_legacy_store_root_prefers_canonical_when_both_exist() {
+    let dir = tempdir().unwrap();
+    let canonical = canonical_store_root(dir.path(), ".test");
+    let legacy = dir.path().join(".test");
+    std::fs::create_dir_all(&canonical).unwrap();
+    std::fs::create_dir_all(&legacy).unwrap();
+
+    let resolution = resolve_explicit_store_root_from(&legacy, ".test");
 
     assert_eq!(resolution.store_root, canonical);
     assert!(matches!(
