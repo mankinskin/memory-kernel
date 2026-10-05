@@ -1,0 +1,24 @@
+{
+  "id": "exec-workflow-tools-patch-free-20261005",
+  "validation_spec_id": "val-workflow-tools-patch-free-kernel-build",
+  "outcome": "passed",
+  "executed_at": "2026-10-05T21:03:57.155204400Z",
+  "duration_ms": 23000,
+  "detail": "`cargo build --manifest-path workflow-tools/Cargo.toml --workspace` completed with 0 errors after removing the root local memory-kernel patch. `workflow-tools/Cargo.lock` records memory-kernel and transport-harness from `git+https://github.com/mankinskin/memory-kernel?branch=main#4dbf47dee8a965bdd42399b81a1ed83165a84331`, matching canonical remote main. Three unrelated warnings remain: TicketFs dead methods, Spec Dioxus snapshot variable, and install-ctl unnecessary mut. The Test API dead helper warning was removed and its 45-test suite passed.",
+  "links": {
+    "spec_ids": [
+      "ae5ef697-0ee5-4f74-9dca-2cb268290dae"
+    ],
+    "ticket_ids": [
+      "39239e48-828a-41d8-a697-9cf02e980da9",
+      "1e1562c1-ddc4-4679-991f-523d9e8a9008"
+    ]
+  },
+  "provenance": {
+    "source_path": "workflow-tools/Cargo.toml",
+    "domain": "memory-kernel",
+    "operation": "patch-free-workspace-build",
+    "transport": "cli",
+    "run_id": "run-domain-store-g10-20261005"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "val-workflow-tools-patch-free-kernel-build",
+  "title": "Workflow-tools patch-free published memory-kernel build",
+  "command": "cargo build --manifest-path workflow-tools/Cargo.toml --workspace",
+  "detail": "G10 proves that, after publishing memory-kernel to canonical remote main and removing the local root patch, the workspace builds against the committed Git source and Cargo.lock records that published commit.",
+  "links": {
+    "spec_ids": [
+      "ae5ef697-0ee5-4f74-9dca-2cb268290dae"
+    ],
+    "ticket_ids": [
+      "39239e48-828a-41d8-a697-9cf02e980da9",
+      "1e1562c1-ddc4-4679-991f-523d9e8a9008"
+    ]
+  }
+}

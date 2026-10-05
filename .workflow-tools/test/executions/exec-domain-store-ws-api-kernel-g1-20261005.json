@@ -1,0 +1,24 @@
+{
+  "id": "exec-domain-store-ws-api-kernel-g1-20261005",
+  "validation_spec_id": "val-memory-kernel-workspace-resolution",
+  "outcome": "passed",
+  "executed_at": "2026-10-05T20:24:52.314488900Z",
+  "detail": "cargo test --manifest-path workflow-tools/memory-kernel/Cargo.toml: 225 passed, 2 suites; cargo test --manifest-path workflow-tools/test/crates/test-mcp/Cargo.toml: 12 passed, 5 suites; patch-free cargo build --manifest-path workflow-tools/Cargo.toml --workspace: 0 errors, 3 unrelated warnings. The original evidence record in aggregate root .workflow-tools/test was not used because it failed owning-store targeting.",
+  "links": {
+    "spec_ids": [
+      "ae5ef697-0ee5-4f74-9dca-2cb268290dae"
+    ],
+    "ticket_ids": [
+      "31e70dab-c379-47a9-8164-77bcb50b038d",
+      "6cf90b00-b6d0-4da0-8af8-1b0aba3dc057",
+      "39239e48-828a-41d8-a697-9cf02e980da9"
+    ]
+  },
+  "provenance": {
+    "source_path": "workflow-tools/memory-kernel/src/workspace_tests.rs",
+    "domain": "memory-kernel",
+    "operation": "workspace-resolution",
+    "transport": "in-process",
+    "run_id": "run-domain-store-g1-20261005"
+  }
+}
