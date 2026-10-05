@@ -1,5 +1,7 @@
-Every domain store's canonical location is `<local_workspace>/.workflow-tools/<domain>`, derived deterministically by `canonical_store_root`. A store-initialization or write path (`resolve_store_root_for_initialization_from`) always targets this canonical path and never falls back to a legacy bare `<dir_name>` layout. A read path (`resolve_store_root_from_with_diagnostics`, `resolve_store_root_at_fixed_workspace`) may still resolve an existing legacy layout for backward compatibility and reports a `StoreRootDiagnostic` when a legacy and canonical layout are both present.
+Every active domain derives its canonical store as `<local_workspace>/.workflow-tools/<domain>` through the shared workspace contract. The active domain set is Ticket, Spec, Test, Session, Feedback, Audit, and Log.
 
-Observable criteria:
-- Creating a new record in any domain (Ticket, Spec, Test, Session, Feedback, Audit, Log) at a `local_workspace` with no existing store lands under `.workflow-tools/<domain>`, never under a bare `.<domain>` sibling.
-- An existing legacy store is still readable, and its presence alongside a canonical store surfaces as `BothLayoutsPresent`, not a silent preference for one over the other.
+- A workspace-based create or write targets only the canonical path.
+- If canonical storage is absent and a legacy `<local_workspace>/.<domain>` store exists, reads may use that legacy store and return a legacy diagnostic. Do not initialize legacy storage.
+- If both layouts exist, select the canonical store and return `BothLayoutsPresent`; do not fail as ambiguous or silently select legacy storage.
+- Preserve supported direct concrete canonical-store overrides. Reject legacy-shaped write overrides, including nonexistent explicit legacy paths, instead of creating or redirecting them.
+- Read-only access to a missing store does not initialize a store.

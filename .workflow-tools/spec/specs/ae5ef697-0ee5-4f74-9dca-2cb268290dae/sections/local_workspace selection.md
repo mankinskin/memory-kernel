@@ -1,5 +1,3 @@
-A `local_workspace` is the caller-selected root the current operation is bound to (explicit `--workspace`/`workspace_root` argument, or the resolved cwd when discovery is permitted). All entity-store reads and writes for the current call are relative to this root; discovery of other roots (see below) never silently substitutes for it.
+The public `workspace` argument selects `local_workspace`, the base for this operation's relative paths, validation, and writes. An explicit `workspace="."` means the caller's current directory and must be normalized to the concrete local workspace before store access or persistence. Omitted, blank, `default`, and `..` selectors are invalid for entity creation.
 
-Observable criteria:
-- `resolve_explicit_store_root_from` and `resolve_store_root_at_fixed_workspace` resolve strictly within the given `local_workspace` and never walk into a sibling or ancestor workspace.
-- `validate_explicit_workspace_selector` rejects an omitted, empty, `default`, or `..` selector for any entity-creation call; `.` is accepted explicitly as "the current process working directory".
+Normalize a repository root, direct store root, or path inside a store to its owning workspace where applicable. A direct concrete canonical-store override remains supported where the domain API exposes it; reject explicit legacy-shaped write paths, whether or not the legacy directory currently exists.
