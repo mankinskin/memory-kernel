@@ -1,5 +1,6 @@
 pub mod cross_store_edges;
 pub mod discovery;
+pub mod domain_store;
 pub mod error;
 pub mod generated_markdown;
 pub mod index_generator;
@@ -23,8 +24,12 @@ pub use storage::{
 
 // Re-export index entry schema types at the crate root for convenient access.
 pub use discovery::{
-    discover_stores, reconcile_stores, summarize, DiscoveredStore, IntegrationStatus,
-    ReconcileSummary, StoreReport, STORE_MARKERS,
+    DiscoveredStore, IntegrationStatus, ReconcileSummary, STORE_MARKERS, StoreReport,
+    discover_stores, reconcile_stores, summarize,
+};
+pub use domain_store::{
+    CreateEntity, DeleteEntity, DomainStore, DomainStoreError, DomainStoreResolution, ListEntities,
+    ReadEntity, StoreAccessMode, UpdateEntity,
 };
 pub use interoperability::InteroperableArtifact;
 pub use model::{
@@ -36,20 +41,20 @@ pub use model::{
     hook::{HookChain, HookFailure, HookOutcome, MutationHook, MutationOutcome, VetoCause},
     index_entry::{ContentKind, IndexEntry, IndexRef, IndexRelations, RelationKind},
     index_sidecar::{
-        read_sidecar, write_sidecar, IndexSidecar, SidecarError, SidecarValidationIssue,
+        IndexSidecar, SidecarError, SidecarValidationIssue, read_sidecar, write_sidecar,
     },
     migration::{
         EntityTypeMigrationStep, ExternalUrnConstraintViolation, ExternalUrnVersionConstraint,
         InactiveEntityTypeReportEntry, MigrationDryRunReport, MigrationJournal,
         MigrationJournalError, MigrationPhase, MigrationPhaseError, MigrationPhaseRecord,
     },
-    urn::{Urn, UrnError, UrnResolver, URN_SCHEME},
+    urn::{URN_SCHEME, Urn, UrnError, UrnResolver},
     workspace_capability::{
         DomainCapabilityState, DomainDependency, UnavailableCapability, WorkspaceCapabilities,
     },
 };
 pub use operation_journal::{
-    OperationJournal, OperationJournalLinks, OperationJournalPhase, OperationJournalStep,
-    OperationPreflight, OperationRecovery, OperationReversibility,
-    OPERATION_JOURNAL_SCHEMA_VERSION,
+    OPERATION_JOURNAL_SCHEMA_VERSION, OperationJournal, OperationJournalLinks,
+    OperationJournalPhase, OperationJournalStep, OperationPreflight, OperationRecovery,
+    OperationReversibility,
 };
