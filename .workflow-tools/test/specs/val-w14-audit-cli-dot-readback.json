@@ -1,0 +1,18 @@
+{
+  "id": "val-w14-audit-cli-dot-readback",
+  "title": "W14 Audit CLI canonical dot-selector read-back",
+  "command": "cargo test --manifest-path workflow-tools/audit/crates/audit-cli/Cargo.toml --test integration_audit --locked cli_output::cli_dot_repo_root_reads_back_from_canonical_audit_store",
+  "detail": "Runs Audit CLI from an isolated selected workspace with repo_root=. and reads the returned run id and status from canonical .workflow-tools/audit/audit.sqlite3, verifying no parent or legacy store write.",
+  "links": {
+    "spec_ids": [
+      "ae5ef697-0ee5-4f74-9dca-2cb268290dae"
+    ],
+    "acceptance_criterion_ids": [
+      "workspace-selector",
+      "canonical-store-root"
+    ],
+    "ticket_ids": [
+      "db3ebe07-6517-4625-9652-538b0681890f"
+    ]
+  }
+}

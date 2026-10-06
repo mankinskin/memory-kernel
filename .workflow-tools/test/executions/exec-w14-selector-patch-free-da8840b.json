@@ -1,0 +1,24 @@
+{
+  "id": "exec-w14-selector-patch-free-da8840b",
+  "validation_spec_id": "val-workflow-tools-patch-free-kernel-build",
+  "outcome": "passed",
+  "executed_at": "2026-10-05T22:23:47.137523600Z",
+  "detail": "cargo build --manifest-path workflow-tools/Cargo.toml --workspace --locked --target-dir workflow-tools/target/w14-validation: 0 errors, 3 previously tracked unrelated warnings. Separate target dir avoids overwriting live ticket.exe PID 19196. No local Cargo patch. Cargo.lock records memory-kernel and transport-harness Git source https://github.com/mankinskin/memory-kernel?branch=main at published da8840b06cec45610761faac87b54efee5cab52d. Comparison to protected pre-test lockfile showed only these two source SHA changes, preserving prior user changes. G10 proof is current partial-implementation evidence, not W14/W15 completion.",
+  "links": {
+    "spec_ids": [
+      "ae5ef697-0ee5-4f74-9dca-2cb268290dae"
+    ],
+    "ticket_ids": [
+      "db3ebe07-6517-4625-9652-538b0681890f",
+      "39239e48-828a-41d8-a697-9cf02e980da9",
+      "1e1562c1-ddc4-4679-991f-523d9e8a9008"
+    ]
+  },
+  "provenance": {
+    "source_path": "workflow-tools/Cargo.lock",
+    "domain": "workflow-tools",
+    "operation": "patch-free-build",
+    "transport": "cli",
+    "run_id": "219518d9-3f67-45dd-a95d-24f10f1b9c36"
+  }
+}

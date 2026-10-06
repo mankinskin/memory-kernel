@@ -1,0 +1,17 @@
+{
+  "id": "val-w14-session-cli-selector-suite",
+  "title": "W14 Session CLI selector and write-boundary suite",
+  "command": "cargo test --manifest-path workflow-tools/session/Cargo.toml --features cli --lib --locked",
+  "detail": "Session CLI selector regression coverage and command-level requirement for explicit workspace/store selection before Session writes.",
+  "links": {
+    "spec_ids": [
+      "ae5ef697-0ee5-4f74-9dca-2cb268290dae"
+    ],
+    "acceptance_criterion_ids": [
+      "workspace-selector"
+    ],
+    "ticket_ids": [
+      "db3ebe07-6517-4625-9652-538b0681890f"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "id": "val-w14-spec-cli-selector-suite",
+  "title": "W14 Spec CLI selector and store-init suite",
+  "command": "cargo test --manifest-path workflow-tools/spec/Cargo.toml --features cli --lib --locked",
+  "detail": "Spec CLI selector and explicit store-init regressions for the workspace selector contract.",
+  "links": {
+    "spec_ids": [
+      "ae5ef697-0ee5-4f74-9dca-2cb268290dae"
+    ],
+    "acceptance_criterion_ids": [
+      "workspace-selector"
+    ],
+    "ticket_ids": [
+      "db3ebe07-6517-4625-9652-538b0681890f"
+    ]
+  }
+}

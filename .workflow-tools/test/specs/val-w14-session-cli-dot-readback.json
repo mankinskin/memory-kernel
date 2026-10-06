@@ -1,0 +1,18 @@
+{
+  "id": "val-w14-session-cli-dot-readback",
+  "title": "W14 Session CLI canonical dot-selector read-back",
+  "command": "cargo test --manifest-path workflow-tools/session/Cargo.toml --features cli --test cli --locked",
+  "detail": "Runs the Session CLI integration suite, including a child-process init from a temporary workspace with --workspace . and API read-back of the same session id from the canonical .workflow-tools/session store, with no legacy or ancestor store writes.",
+  "links": {
+    "spec_ids": [
+      "ae5ef697-0ee5-4f74-9dca-2cb268290dae"
+    ],
+    "acceptance_criterion_ids": [
+      "workspace-selector",
+      "canonical-store-root"
+    ],
+    "ticket_ids": [
+      "db3ebe07-6517-4625-9652-538b0681890f"
+    ]
+  }
+}

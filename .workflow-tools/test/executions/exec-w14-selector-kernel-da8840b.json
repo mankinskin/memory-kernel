@@ -1,0 +1,24 @@
+{
+  "id": "exec-w14-selector-kernel-da8840b",
+  "validation_spec_id": "val-memory-kernel-workspace-resolution",
+  "outcome": "passed",
+  "executed_at": "2026-10-05T22:23:47.121543800Z",
+  "detail": "cargo test --manifest-path workflow-tools/memory-kernel/Cargo.toml: 226 unit tests and 2 doctests passed. Shared normalizer resolves dot and padded dot to concrete cwd, rejects ambient aliases, preserves concrete paths without initializing stores. Published kernel commit da8840b06cec45610761faac87b54efee5cab52d on canonical origin/main. Evidence is kernel-scoped only; the seven-domain selector ticket remains in implementation.",
+  "links": {
+    "spec_ids": [
+      "ae5ef697-0ee5-4f74-9dca-2cb268290dae"
+    ],
+    "ticket_ids": [
+      "db3ebe07-6517-4625-9652-538b0681890f",
+      "39239e48-828a-41d8-a697-9cf02e980da9"
+    ]
+  },
+  "provenance": {
+    "source_path": "workflow-tools/memory-kernel/src/workspace_tests.rs",
+    "test_id": "explicit_workspace_selector_normalizes_current_directory",
+    "domain": "memory-kernel",
+    "operation": "selector-normalization",
+    "transport": "in-process",
+    "run_id": "219518d9-3f67-45dd-a95d-24f10f1b9c36"
+  }
+}

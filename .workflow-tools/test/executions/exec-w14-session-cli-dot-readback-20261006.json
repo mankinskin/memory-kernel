@@ -1,0 +1,28 @@
+{
+  "id": "exec-w14-session-cli-dot-readback-20261006",
+  "validation_spec_id": "val-w14-session-cli-dot-readback",
+  "outcome": "passed",
+  "executed_at": "2026-10-06T01:44:19.284549800Z",
+  "duration_ms": 1200,
+  "detail": "cargo test --manifest-path workflow-tools/session/Cargo.toml --features cli --test cli --locked: 9 passed after extracting and exhaustively matching the Session write policy. The child process ran init --workspace . in an isolated temporary workspace; SessionStoreConfig read back the same session id from <workspace>/.workflow-tools/session. The test confirmed neither <workspace>/.session nor the fixture parent .workflow-tools/session was created.",
+  "links": {
+    "spec_ids": [
+      "ae5ef697-0ee5-4f74-9dca-2cb268290dae"
+    ],
+    "acceptance_criterion_ids": [
+      "workspace-selector",
+      "canonical-store-root"
+    ],
+    "ticket_ids": [
+      "db3ebe07-6517-4625-9652-538b0681890f"
+    ]
+  },
+  "provenance": {
+    "source_path": "workflow-tools/session/tests/cli.rs",
+    "test_id": "init_with_dot_workspace_reads_back_from_canonical_store",
+    "domain": "session",
+    "operation": "dot-selector-persisted-readback",
+    "transport": "cli",
+    "run_id": "219518d9-3f67-45dd-a95d-24f10f1b9c36"
+  }
+}

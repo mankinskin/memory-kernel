@@ -1,0 +1,24 @@
+{
+  "id": "exec-w14-audit-cli-dot-readback-20261006",
+  "validation_spec_id": "val-w14-audit-cli-dot-readback",
+  "outcome": "passed",
+  "executed_at": "2026-10-06T18:41:01.782963800Z",
+  "duration_ms": 50,
+  "detail": "cargo +nightly test --manifest-path workflow-tools/audit/crates/audit-cli/Cargo.toml --test integration_audit --locked cli_output::cli_dot_repo_root_reads_back_from_canonical_audit_store: 1 passed. A separate full integration run passed all 8 tests under nightly; stable toolchain fails one existing fixture because nested cargo test uses -Z unstable-options.",
+  "links": {
+    "spec_ids": [
+      "ae5ef697-0ee5-4f74-9dca-2cb268290dae"
+    ],
+    "ticket_ids": [
+      "db3ebe07-6517-4625-9652-538b0681890f"
+    ]
+  },
+  "provenance": {
+    "source_path": "workflow-tools/audit/crates/audit-cli/tests/integration_audit/cli_output.rs",
+    "test_id": "cli_dot_repo_root_reads_back_from_canonical_audit_store",
+    "domain": "audit",
+    "operation": "dot-selector-persisted-readback",
+    "transport": "cli",
+    "run_id": "219518d9-3f67-45dd-a95d-24f10f1b9c36"
+  }
+}

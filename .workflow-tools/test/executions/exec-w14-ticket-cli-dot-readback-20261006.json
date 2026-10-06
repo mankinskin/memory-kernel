@@ -1,0 +1,28 @@
+{
+  "id": "exec-w14-ticket-cli-dot-readback-20261006",
+  "validation_spec_id": "val-w14-ticket-cli-dot-readback",
+  "outcome": "passed",
+  "executed_at": "2026-10-06T01:46:46.321847500Z",
+  "duration_ms": 1650,
+  "detail": "cargo test --manifest-path workflow-tools/ticket/Cargo.toml --features cli --test integration_workspace_policy --locked create_with_dot_workspace_reads_back_from_canonical_store: 1 passed. The isolated child process created with --workspace . and the test read the same id/title back through TicketStore from <workspace>/.workflow-tools/ticket, confirming no legacy .ticket or parent store write.",
+  "links": {
+    "spec_ids": [
+      "ae5ef697-0ee5-4f74-9dca-2cb268290dae"
+    ],
+    "acceptance_criterion_ids": [
+      "workspace-selector",
+      "canonical-store-root"
+    ],
+    "ticket_ids": [
+      "db3ebe07-6517-4625-9652-538b0681890f"
+    ]
+  },
+  "provenance": {
+    "source_path": "workflow-tools/ticket/tests/integration_workspace_policy.rs",
+    "test_id": "create_with_dot_workspace_reads_back_from_canonical_store",
+    "domain": "ticket",
+    "operation": "dot-selector-persisted-readback",
+    "transport": "cli",
+    "run_id": "219518d9-3f67-45dd-a95d-24f10f1b9c36"
+  }
+}
