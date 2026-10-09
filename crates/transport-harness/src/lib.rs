@@ -18,10 +18,7 @@ pub enum Transport {
 }
 
 impl std::fmt::Display for Transport {
-    fn fmt(
-        &self,
-        formatter: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = match self {
             Self::Cli => "cli",
             Self::Mcp => "mcp",
@@ -78,10 +75,7 @@ impl HarnessError {
         Self::Domain(error.to_string())
     }
 
-    fn transport(
-        transport: Transport,
-        error: impl std::fmt::Display,
-    ) -> Self {
+    fn transport(transport: Transport, error: impl std::fmt::Display) -> Self {
         Self::Transport {
             transport,
             message: error.to_string(),
@@ -90,10 +84,7 @@ impl HarnessError {
 }
 
 /// Writes shared output with exactly one trailing newline.
-pub fn write_output(
-    mut writer: impl Write,
-    output: &Output,
-) -> Result<(), HarnessError> {
+pub fn write_output(mut writer: impl Write, output: &Output) -> Result<(), HarnessError> {
     match output {
         Output::Text(text) => writeln!(writer, "{text}")?,
         Output::Json(value) => {
@@ -120,9 +111,7 @@ pub mod cli {
     use super::{HarnessError, Output, Transport, init_tracing, write_output};
 
     /// Parses process arguments, invokes domain dispatch, and writes its output.
-    pub fn run<Command, Dispatch>(
-        dispatch: Dispatch
-    ) -> Result<(), HarnessError>
+    pub fn run<Command, Dispatch>(dispatch: Dispatch) -> Result<(), HarnessError>
     where
         Command: Parser,
         Dispatch: FnOnce(Command) -> Result<Output, HarnessError>,
@@ -174,12 +163,14 @@ pub mod mcp {
             .enable_all()
             .build()?;
         runtime.block_on(async move {
-            let service = server.serve(stdio()).await.map_err(|error| {
-                HarnessError::transport(Transport::Mcp, error)
-            })?;
-            service.waiting().await.map_err(|error| {
-                HarnessError::transport(Transport::Mcp, error)
-            })?;
+            let service = server
+                .serve(stdio())
+                .await
+                .map_err(|error| HarnessError::transport(Transport::Mcp, error))?;
+            service
+                .waiting()
+                .await
+                .map_err(|error| HarnessError::transport(Transport::Mcp, error))?;
             Ok(())
         })
     }
@@ -238,23 +229,19 @@ pub mod http {
     }
 
     /// Binds an address and serves a domain-owned router until shutdown.
-    pub fn run(
-        address: SocketAddr,
-        router: Router,
-    ) -> Result<(), HarnessError> {
+    pub fn run(address: SocketAddr, router: Router) -> Result<(), HarnessError> {
         init_tracing();
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()?;
         runtime.block_on(async move {
-            let listener =
-                tokio::net::TcpListener::bind(address).await.map_err(
-                    |error| HarnessError::transport(Transport::Http, error),
-                )?;
+            let listener = tokio::net::TcpListener::bind(address)
+                .await
+                .map_err(|error| HarnessError::transport(Transport::Http, error))?;
             tracing::info!(%address, "HTTP transport listening");
-            axum::serve(listener, router).await.map_err(|error| {
-                HarnessError::transport(Transport::Http, error)
-            })
+            axum::serve(listener, router)
+                .await
+                .map_err(|error| HarnessError::transport(Transport::Http, error))
         })
     }
 }
@@ -273,8 +260,7 @@ mod tests {
     #[test]
     fn write_output_appends_one_newline_to_text() {
         let mut bytes = Vec::new();
-        write_output(&mut bytes, &Output::Text("ready".into()))
-            .expect("text output should write");
+        write_output(&mut bytes, &Output::Text("ready".into())).expect("text output should write");
         assert_eq!(bytes, b"ready\n");
     }
 
@@ -291,22 +277,14 @@ mod tests {
 
     #[test]
     fn output_json_serializes_domain_values() {
-        let output = Output::json(Payload { status: "ready" })
-            .expect("payload should serialize");
-        assert_eq!(
-            output,
-            Output::Json(serde_json::json!({"status": "ready"}))
-        );
+        let output = Output::json(Payload { status: "ready" }).expect("payload should serialize");
+        assert_eq!(output, Output::Json(serde_json::json!({"status": "ready"})));
     }
 
     #[test]
     fn transport_error_retains_transport_context() {
-        let error =
-            HarnessError::transport(Transport::Mcp, "connection closed");
-        assert_eq!(
-            error.to_string(),
-            "mcp transport failed: connection closed"
-        );
+        let error = HarnessError::transport(Transport::Mcp, "connection closed");
+        assert_eq!(error.to_string(), "mcp transport failed: connection closed");
     }
 
     #[cfg(feature = "cli")]
@@ -324,9 +302,7 @@ mod tests {
         crate::cli::run_from(
             ["example", "--name", "Ada"],
             &mut bytes,
-            |command: Command| {
-                Ok(Output::Text(format!("hello {}", command.name)))
-            },
+            |command: Command| Ok(Output::Text(format!("hello {}", command.name))),
         )
         .expect("CLI dispatch should succeed");
 
@@ -336,11 +312,8 @@ mod tests {
     #[cfg(feature = "http")]
     #[test]
     fn http_error_retains_the_mapped_status() {
-        let error = crate::http::HttpError::new(
-            crate::http::StatusCode::NOT_FOUND,
-            "not_found",
-            "missing",
-        );
+        let error =
+            crate::http::HttpError::new(crate::http::StatusCode::NOT_FOUND, "not_found", "missing");
         assert_eq!(error.status(), crate::http::StatusCode::NOT_FOUND);
     }
 }

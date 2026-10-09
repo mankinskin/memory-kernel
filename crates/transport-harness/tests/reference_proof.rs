@@ -31,10 +31,7 @@ mod fixture {
     pub struct NotFound(pub String);
 
     impl std::fmt::Display for NotFound {
-        fn fmt(
-            &self,
-            formatter: &mut std::fmt::Formatter<'_>,
-        ) -> std::fmt::Result {
+        fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(formatter, "unknown item: {}", self.0)
         }
     }
@@ -56,12 +53,7 @@ mod fixture {
 /// This runs even under `default = []`, proving the shared output and error
 /// mechanics do not depend on CLI, MCP, or HTTP.
 mod core_proof {
-    use transport_harness::{
-        HarnessError,
-        Output,
-        Transport,
-        write_output,
-    };
+    use transport_harness::{HarnessError, Output, Transport, write_output};
 
     #[test]
     fn core_output_and_error_work_without_transport_features() {
@@ -73,8 +65,7 @@ mod core_proof {
         let mut json = Vec::new();
         write_output(
             &mut json,
-            &Output::json(serde_json::json!({"status": "ready"}))
-                .expect("json should serialize"),
+            &Output::json(serde_json::json!({"status": "ready"})).expect("json should serialize"),
         )
         .expect("json output should write");
         assert_eq!(json, b"{\"status\":\"ready\"}\n");
@@ -89,14 +80,10 @@ mod core_proof {
 #[cfg(feature = "cli")]
 mod cli_proof {
     use transport_harness::{
-        HarnessError,
-        Output,
+        HarnessError, Output,
         cli::{
             self,
-            clap::{
-                self,
-                Parser,
-            },
+            clap::{self, Parser},
         },
     };
 
@@ -121,8 +108,7 @@ mod cli_proof {
     fn dispatch(command: Command) -> Result<Output, HarnessError> {
         match command.op {
             Op::Describe { id } => {
-                let item =
-                    fixture::describe(&id).map_err(HarnessError::domain)?;
+                let item = fixture::describe(&id).map_err(HarnessError::domain)?;
                 Output::json(item)
             }
         }
@@ -160,9 +146,8 @@ mod cli_proof {
     #[test]
     fn cli_invalid_arguments_map_to_arguments_error() {
         let mut buffer = Vec::new();
-        let error =
-            cli::run_from(["example-cli", "bogus"], &mut buffer, dispatch)
-                .expect_err("invalid subcommand should fail");
+        let error = cli::run_from(["example-cli", "bogus"], &mut buffer, dispatch)
+            .expect_err("invalid subcommand should fail");
         assert!(matches!(error, HarnessError::Arguments(_)));
     }
 }
@@ -173,24 +158,11 @@ mod cli_proof {
 mod mcp_proof {
     use serde::Deserialize;
     use transport_harness::mcp::rmcp::{
-        ErrorData as McpError,
-        ServerHandler,
-        handler::server::{
-            tool::ToolRouter,
-            wrapper::Parameters,
-        },
-        model::{
-            CallToolResult,
-            Content,
-            RawContent,
-        },
-        schemars::{
-            self,
-            JsonSchema,
-        },
-        tool,
-        tool_handler,
-        tool_router,
+        ErrorData as McpError, ServerHandler,
+        handler::server::{tool::ToolRouter, wrapper::Parameters},
+        model::{CallToolResult, Content, RawContent},
+        schemars::{self, JsonSchema},
+        tool, tool_handler, tool_router,
     };
 
     use super::fixture;
@@ -237,8 +209,7 @@ mod mcp_proof {
     impl ServerHandler for DescribeServer {}
 
     fn text_of(result: &CallToolResult) -> String {
-        let content =
-            result.content.first().expect("result should carry content");
+        let content = result.content.first().expect("result should carry content");
         match &content.raw {
             RawContent::Text(text) => text.text.clone(),
             other => panic!("expected text content, got {other:?}"),
@@ -279,21 +250,13 @@ mod mcp_proof {
 mod http_proof {
     use tower::ServiceExt;
     use transport_harness::http::{
-        HttpError,
-        Router,
-        StatusCode,
+        HttpError, Router, StatusCode,
         axum::{
             Json,
-            body::{
-                Body,
-                to_bytes,
-            },
+            body::{Body, to_bytes},
             extract::Path,
             http::Request,
-            response::{
-                IntoResponse,
-                Response,
-            },
+            response::{IntoResponse, Response},
             routing::get,
         },
     };
@@ -307,12 +270,8 @@ mod http_proof {
                 "summary": item.summary,
             }))
             .into_response(),
-            Err(error) => HttpError::new(
-                StatusCode::NOT_FOUND,
-                "not_found",
-                error.to_string(),
-            )
-            .into_response(),
+            Err(error) => HttpError::new(StatusCode::NOT_FOUND, "not_found", error.to_string())
+                .into_response(),
         }
     }
 
