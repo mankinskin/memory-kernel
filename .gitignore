@@ -7,3 +7,6 @@
 **/.test/**/executions/
 **/.workflow-tools/test/**/executions/
 scan_fingerprints.json
+
+# Stable ticket advisory locks are retained to preserve the lock inode.
+.ticket-lock
