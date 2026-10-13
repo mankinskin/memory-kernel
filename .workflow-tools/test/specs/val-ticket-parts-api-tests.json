@@ -1,0 +1,29 @@
+{
+  "id": "val-ticket-parts-api-tests",
+  "title": "Ticket part API regression suite",
+  "command": "cargo test -p ticket-api",
+  "detail": "Run from workflow-tools/ticket. Guards the API-level model, nonblank write gate, ready lifecycle, slug and ordinal allocation, journal recovery, part-layout and empty-part migration, description migration and explicit description modes, typed refs, projected reads, and legacy reads.",
+  "slow_threshold_ms": 300000,
+  "links": {
+    "spec_ids": [
+      "24b3d22b-e235-4c4f-b53c-75fb819ea95b"
+    ],
+    "acceptance_criterion_ids": [
+      "parts-model",
+      "ready-lifecycle",
+      "nonblank-writes",
+      "slug-paths",
+      "recoverable-persistence",
+      "path-migration",
+      "empty-cleanup",
+      "description-compatibility",
+      "legacy-reads",
+      "description-mode",
+      "typed-refs",
+      "read-projections"
+    ],
+    "ticket_ids": [
+      "4481be49-6bf6-497f-93a8-ab9301ece3b0"
+    ]
+  }
+}

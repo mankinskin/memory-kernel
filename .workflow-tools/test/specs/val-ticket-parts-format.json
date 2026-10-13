@@ -1,0 +1,15 @@
+{
+  "id": "val-ticket-parts-format",
+  "title": "Ticket part API formatting",
+  "command": "cargo fmt --check -p ticket-api",
+  "detail": "Run from workflow-tools/ticket. Formatting gate for the API changes in the planned implementation.",
+  "slow_threshold_ms": 120000,
+  "links": {
+    "spec_ids": [
+      "24b3d22b-e235-4c4f-b53c-75fb819ea95b"
+    ],
+    "ticket_ids": [
+      "4481be49-6bf6-497f-93a8-ab9301ece3b0"
+    ]
+  }
+}

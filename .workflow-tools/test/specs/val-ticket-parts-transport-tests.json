@@ -1,0 +1,18 @@
+{
+  "id": "val-ticket-parts-transport-tests",
+  "title": "Ticket part transport regression suite",
+  "command": "cargo test -p ticket --all-features",
+  "detail": "Run from workflow-tools/ticket. Builds and tests the ticket package with CLI, MCP, and HTTP surfaces enabled, validating that external part-write transports preserve the shared ticket-api contract.",
+  "slow_threshold_ms": 300000,
+  "links": {
+    "spec_ids": [
+      "24b3d22b-e235-4c4f-b53c-75fb819ea95b"
+    ],
+    "acceptance_criterion_ids": [
+      "transport-consistency"
+    ],
+    "ticket_ids": [
+      "4481be49-6bf6-497f-93a8-ab9301ece3b0"
+    ]
+  }
+}
