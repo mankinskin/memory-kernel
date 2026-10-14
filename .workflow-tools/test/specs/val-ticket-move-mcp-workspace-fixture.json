@@ -1,0 +1,11 @@
+{
+  "id": "val-ticket-move-mcp-workspace-fixture",
+  "title": "Move MCP workspace fixture test",
+  "command": "cargo test -j 1 -p ticket --all-features --test integration_move_mcp -- --nocapture",
+  "detail": "Run from workflow-tools/ticket. Verifies move MCP fixture requests use the configured temporary source store.",
+  "links": {
+    "ticket_ids": [
+      "4481be49-6bf6-497f-93a8-ab9301ece3b0"
+    ]
+  }
+}
