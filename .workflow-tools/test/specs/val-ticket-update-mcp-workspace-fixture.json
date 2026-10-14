@@ -1,0 +1,11 @@
+{
+  "id": "val-ticket-update-mcp-workspace-fixture",
+  "title": "Update MCP workspace fixture tests",
+  "command": "cargo test -j 1 -p ticket --all-features --test integration_update_mcp -- --nocapture",
+  "detail": "Run from workflow-tools/ticket. Verifies update MCP fixtures use valid states and explicit temporary workspace paths.",
+  "links": {
+    "ticket_ids": [
+      "4481be49-6bf6-497f-93a8-ab9301ece3b0"
+    ]
+  }
+}
