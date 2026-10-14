@@ -1,0 +1,11 @@
+{
+  "id": "val-ticket-store-index-output-fixture",
+  "title": "Store-index output-path integration tests",
+  "command": "cargo test -j 1 -p ticket --all-features --test integration_store_index -- --nocapture",
+  "detail": "Run from workflow-tools/ticket. Verifies catalog outputs are read from the documented .ticket location while input tickets reside in the canonical workspace store.",
+  "links": {
+    "ticket_ids": [
+      "4481be49-6bf6-497f-93a8-ab9301ece3b0"
+    ]
+  }
+}
