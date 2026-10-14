@@ -1,0 +1,11 @@
+{
+  "id": "val-ticket-board-mcp-workspace-fixtures",
+  "title": "Board MCP workspace fixture tests",
+  "command": "cargo test -j 1 -p ticket --all-features --test integration_board_mcp -- --nocapture",
+  "detail": "Run from workflow-tools/ticket. Verifies MCP board and next-ticket integration fixtures target their configured temporary store.",
+  "links": {
+    "ticket_ids": [
+      "4481be49-6bf6-497f-93a8-ab9301ece3b0"
+    ]
+  }
+}

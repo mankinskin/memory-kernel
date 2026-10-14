@@ -1,0 +1,11 @@
+{
+  "id": "val-ticket-cli-format",
+  "title": "Ticket CLI formatting gate",
+  "command": "cargo fmt --check -p ticket",
+  "detail": "Run from workflow-tools/ticket. Formatting gate for the ticket server and CLI package.",
+  "links": {
+    "ticket_ids": [
+      "4481be49-6bf6-497f-93a8-ab9301ece3b0"
+    ]
+  }
+}

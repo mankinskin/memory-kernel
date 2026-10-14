@@ -1,0 +1,11 @@
+{
+  "id": "val-ticket-server-default-reads",
+  "title": "Ticket server default-workspace query tests",
+  "command": "cargo test -j 1 -p ticket --all-features server::query::tests -- --nocapture",
+  "detail": "Run from workflow-tools/ticket. Confirms omitted workspace selectors resolve to TicketServer.index_root for read queries.",
+  "links": {
+    "ticket_ids": [
+      "4481be49-6bf6-497f-93a8-ab9301ece3b0"
+    ]
+  }
+}
