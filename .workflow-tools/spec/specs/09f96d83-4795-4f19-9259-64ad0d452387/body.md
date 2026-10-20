@@ -83,9 +83,7 @@ Persist VS Code Copilot session state through `session-api` using periodic captu
 # Evidence Mapping
 - Hook configs/scripts:
 	- `.github/hooks/hooks.json`
-	- `.clinerules/hooks/hooks.json`
 	- `tools/agent-hooks/session-capture-stop.sh`
-	- `.clinerules/hooks/session-capture-stop.sh`
 - Session-api executable and merge/parser behavior:
 	- `memory-api/crates/session-api/src/bin/copilot-capture-hook.rs`
 	- `memory-api/crates/session-api/src/hook.rs`

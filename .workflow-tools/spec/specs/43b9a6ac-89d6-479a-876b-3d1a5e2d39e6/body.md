@@ -2,9 +2,9 @@
 
 ## Problem
 
-The repository maintains agent-facing guidance (instructions, agent definitions, prompts, skills, root guidance) as hand-owned markdown under `.agents/**`, `AGENTS.md`, and `.github/copilot-instructions.md`. Every additional agent client (Cline, OpenCode, and future clients) needs the *same* guidance expressed in a *different* container format: different frontmatter key sets, different file layout, different discovery entry point.
+The repository maintains agent-facing guidance (instructions, agent definitions, prompts, skills, root guidance) as hand-owned markdown under `.agents/**`, `AGENTS.md`, and `.github/copilot-instructions.md`. Every additional agent client (such as OpenCode) needs the same guidance expressed in a different container format: different frontmatter key sets, file layouts, and discovery entry points.
 
-Maintaining N near-identical copies that differ only by consumer protocol is unsustainable. The rule system already solves the hard part — canonical fragments with deterministic composition — and `.clinerules/` proves the projection works. What is missing is the ability to vary the *rendering* per client.
+Maintaining N near-identical copies that differ only by consumer protocol is unsustainable. The core design problem is sharing canonical fragments with deterministic composition while varying the rendering per client.
 
 ## Prior Decision Reversal
 
@@ -29,7 +29,7 @@ Three properties block a multi-client design today:
 | Bootstrap layer | `AGENTS.md` stays committed and directs the reader to committed install instructions. |
 | Front-matter location | Structured metadata fields on the rule entry; `body.md` becomes pure prose. |
 | Rendering mechanism | A Rust templating engine (`minijinja`) plus per-client template files that read the structured metadata. |
-| Client set (v1) | GitHub Copilot / VS Code, Cline, OpenCode. |
+| Client set (v1) | GitHub Copilot / VS Code, OpenCode. |
 | Install surface | Both a `rule install --client <name>` subcommand and a top-level `install-guidance.sh` convenience wrapper. |
 | Install configuration | A committed availability manifest plus a gitignored per-machine selection lockfile. Surfaces are CLI-configurable. |
 | Authoring loop | Edit the generated file, then `rule sync-rules` reverse-syncs it back into the store. |
@@ -47,12 +47,12 @@ Generated surfaces in v1:
 - Skill files (`.agents/skills/*/SKILL.md`), including vendored-skill installation
 - Root `AGENTS.md` and `.github/copilot-instructions.md`
 - Client entry config (`opencode.json` instructions pointer, `.vscode/settings.json` discovery wiring)
-- Hook manifests (`.github/hooks/`, `.clinerules/hooks/`)
+- Hook manifests (`.github/hooks/`)
 
 ## Non-Goals
 
 - Reverting the deleted rule-target configs. The track re-imports from current files instead.
-- Supporting clients beyond Copilot, Cline, and OpenCode in v1.
+- Supporting clients beyond Copilot and OpenCode in v1.
 - Replacing `skills-lock.json` as the vendoring mechanism; it is invoked by the installer, not superseded.
 - Machine-specific absolute path addressing anywhere in generated-target state.
 
@@ -67,22 +67,22 @@ guidance-install.toml (availability manifest)         │
         │                                             │
         └──> .guidance-install.lock (per machine)      ▼
                                           gitignored client outputs
-                                          (.agents/**, .clinerules/**,
-                                           opencode.json, hooks, skills)
+                                          (.agents/**, opencode.json,
+                                           hooks, skills)
 ```
 
 Reverse path: edit a generated file, then `rule sync-rules` parses provenance markers, re-attaches structured metadata, and writes back to the owning rule entry.
 
 ## Acceptance Criteria
 
-1. A single canonical rule fragment renders correctly into Copilot, Cline, and OpenCode output without any client-specific text stored in the fragment body.
+1. A single canonical rule fragment renders correctly into Copilot and OpenCode output without any client-specific text stored in the fragment body.
 2. Frontmatter is produced by the client profile from structured rule-entry metadata, not hoisted from a body.
 3. `rule install --client <name>` materializes every selected surface for that client, and re-running is idempotent.
 4. `install-guidance.sh` provides the same capability through the existing install-script family shape.
 5. Golden-file fixtures for each client profile render byte-identical.
 6. Render → `sync-rules` → re-render is idempotent, including structured metadata.
 7. A pre-commit drift gate fails when the rule store and rendered fixtures disagree.
-8. Each of the three clients loads its installed guidance in a live smoke test.
+8. Each of the two clients loads its installed guidance in a live smoke test.
 9. No generated-target state record contains a machine-specific absolute path.
 10. `sync-targets` refuses to overwrite a marker-free file without an explicit force flag.
 11. A fresh clone contains `AGENTS.md`, which directs the reader to install instructions; all other guidance surfaces are absent until install runs.
@@ -92,7 +92,7 @@ Reverse path: edit a generated file, then `rule sync-rules` parses provenance ma
 - Golden-file snapshot tests per client profile per surface.
 - Round-trip idempotence test over the full store.
 - Pre-commit drift gate covering rule store versus rendered fixtures.
-- Live client smoke test for Copilot, Cline, and OpenCode.
+- Live client smoke test for Copilot and OpenCode.
 - Fresh-clone bootstrap test: clone, confirm only `AGENTS.md` is present, run the installer, confirm all surfaces materialize.
 
 ## Risks
