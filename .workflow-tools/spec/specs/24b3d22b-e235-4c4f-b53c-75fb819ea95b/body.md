@@ -4,13 +4,15 @@
 
 ## Target Code Location
 
-- [crates/ticket-api/src/model/ticket.rs](../../../../ticket/crates/ticket-api/src/model/ticket.rs) — `TicketPart` and part-kind model.
-- [crates/ticket-api/src/storage/store/parts.rs](../../../../ticket/crates/ticket-api/src/storage/store/parts.rs) — shared part-write API and validation gate.
-- [crates/ticket-api/src/storage/store/migration.rs](../../../../ticket/crates/ticket-api/src/storage/store/migration.rs) — preflight all split-description segments before publishing parts.
-- [crates/ticket-api/src/storage/ticket_fs.rs](../../../../ticket/crates/ticket-api/src/storage/ticket_fs.rs) — filesystem persistence, freeze transition, manifest publication, and recovery.
-- [crates/ticket-api/src/storage/ticket_fs/transaction.rs](../../../../ticket/crates/ticket-api/src/storage/ticket_fs/transaction.rs) — ticket-local staged publication, journaling, and recovery.
-- [crates/ticket-api/src/storage/ticket_fs/transaction/tests.rs](../../../../ticket/crates/ticket-api/src/storage/ticket_fs/transaction/tests.rs) — publication-boundary recovery and conflict regressions.
-- [crates/ticket-api/src/storage/tests/update_regression_tests.rs](../../../../ticket/crates/ticket-api/src/storage/tests/update_regression_tests.rs) — regression coverage for lifecycle and persistence behavior.
+- [crates/ticket-api/src/model/ticket.rs](../../../../../ticket/crates/ticket-api/src/model/ticket.rs) — `TicketPart` and part-kind model.
+- [crates/ticket-api/src/storage/store/parts.rs](../../../../../ticket/crates/ticket-api/src/storage/store/parts.rs) — shared part-write API and validation gate.
+- [crates/ticket-api/src/storage/store/migration.rs](../../../../../ticket/crates/ticket-api/src/storage/store/migration.rs) — preflight all split-description segments before publishing parts.
+- [crates/ticket-api/src/storage/store/part_layout_migration.rs](../../../../../ticket/crates/ticket-api/src/storage/store/part_layout_migration.rs) and its [planner](../../../../../ticket/crates/ticket-api/src/storage/store/part_layout_migration/planning.rs), [executor](../../../../../ticket/crates/ticket-api/src/storage/store/part_layout_migration/execution.rs), [integrity checks](../../../../../ticket/crates/ticket-api/src/storage/store/part_layout_migration/integrity.rs), and [read-back/undo operations](../../../../../ticket/crates/ticket-api/src/storage/store/part_layout_migration/verify_undo.rs) — bounded dry-run, apply, verify, and undo.
+- [crates/ticket-api/src/storage/ticket_fs.rs](../../../../../ticket/crates/ticket-api/src/storage/ticket_fs.rs) and [ticket_fs/part_layout.rs](../../../../../ticket/crates/ticket-api/src/storage/ticket_fs/part_layout.rs) — filesystem persistence, freeze transition, read-only layout snapshots, and transactional publication.
+- [crates/ticket-api/src/storage/ticket_fs/transaction.rs](../../../../../ticket/crates/ticket-api/src/storage/ticket_fs/transaction.rs) — ticket-local staged publication, journaling, and recovery.
+- [crates/ticket-api/src/storage/ticket_fs/transaction/tests.rs](../../../../../ticket/crates/ticket-api/src/storage/ticket_fs/transaction/tests.rs) — publication-boundary recovery and conflict regressions.
+- [crates/ticket-api/src/storage/tests/update_regression_tests.rs](../../../../../ticket/crates/ticket-api/src/storage/tests/update_regression_tests.rs) — regression coverage for lifecycle and persistence behavior.
+- [CLI migration command](../../../../../ticket/src/cli/commands/migrate_part_layout.rs) and [batch guard](../../../../../ticket/src/cli/batch/dispatch.rs) — saved-report interface and prohibition on wrapping migration in `ticket batch`.
 
 ## Naming Conventions
 
@@ -30,15 +32,17 @@
 
 ## Reading Order
 
-1. [Ticket filesystem model](../../../../ticket/crates/ticket-api/src/model/filesystem.rs) — manifest schema for `[[parts]]` and `[[refs]]`.
-2. [Ticket part model](../../../../ticket/crates/ticket-api/src/model/ticket.rs) — stable part identity, kind, and paths.
-3. [Shared part-write API](../../../../ticket/crates/ticket-api/src/storage/store/parts.rs) — common write gate and caller behavior.
-4. [Ticket filesystem persistence](../../../../ticket/crates/ticket-api/src/storage/ticket_fs.rs) — part-file and manifest mutation, freeze, and recovery entry points.
-5. [Ticket transaction layer](../../../../ticket/crates/ticket-api/src/storage/ticket_fs/transaction.rs) — journal phases, generation commit point, and rollback/finalization.
-6. [Transaction recovery tests](../../../../ticket/crates/ticket-api/src/storage/ticket_fs/transaction/tests.rs) — interrupted publication and conflict cases.
-7. [Ticket CLI and transport package](../../../../ticket/) — caller surfaces that must preserve the shared API contract.
-8. [Planning dossier evidence](../../../../transcripts/12-10-2026_ticket-part-empty-files/ARTIFACTS.md) — observed empty files, tracking-ticket search, and traced write path.
-9. [Requester decisions](../../../../transcripts/12-10-2026_ticket-part-empty-files/INTERVIEW.md) — filename ordinals and exact cleanup eligibility.
+1. [Ticket filesystem model](../../../../../ticket/crates/ticket-api/src/model/filesystem.rs) — manifest schema for `[[parts]]` and `[[refs]]`.
+2. [Ticket part model](../../../../../ticket/crates/ticket-api/src/model/ticket.rs) — stable part identity, kind, and paths.
+3. [Shared part-write API](../../../../../ticket/crates/ticket-api/src/storage/store/parts.rs) — common write gate and caller behavior.
+4. [Ticket filesystem persistence](../../../../../ticket/crates/ticket-api/src/storage/ticket_fs.rs) — part-file and manifest mutation, freeze, and recovery entry points.
+5. [Ticket transaction layer](../../../../../ticket/crates/ticket-api/src/storage/ticket_fs/transaction.rs) — journal phases, generation commit point, and rollback/finalization.
+6. [Part-layout migration planner and executor](../../../../../ticket/crates/ticket-api/src/storage/store/part_layout_migration.rs) — saved dry-run reports, apply, verify, and undo.
+7. [Ticket CLI migration command](../../../../../ticket/src/cli/commands/migrate_part_layout.rs) — operation modes and report-file contract.
+8. [Transaction recovery tests](../../../../../ticket/crates/ticket-api/src/storage/ticket_fs/transaction/tests.rs) — interrupted publication and conflict cases.
+9. [Ticket CLI and transport package](../../../../../ticket/) — caller surfaces that must preserve the shared API contract.
+10. [Planning dossier evidence](../../../../../../transcripts/12-10-2026_ticket-part-empty-files/ARTIFACTS.md) — observed empty files, tracking-ticket search, and traced write path.
+11. [Requester decisions](../../../../../../transcripts/12-10-2026_ticket-part-empty-files/INTERVIEW.md) — filename ordinals and exact cleanup eligibility.
 
 ## Responsibility
 
@@ -52,8 +56,8 @@ If this specification is implemented, dependents can rely on all externally reac
 
 ## Interfaces And Dependencies
 
-- CLI, MCP, and HTTP part-write entry points call the shared `TicketStore::write_part` API in [parts.rs](../../../../ticket/crates/ticket-api/src/storage/store/parts.rs); none may bypass its validation, lifecycle, or persistence rules.
-- Filesystem operations use the existing per-ticket lock and manifest model in [ticket_fs.rs](../../../../ticket/crates/ticket-api/src/storage/ticket_fs.rs). Multi-file consistency is provided by journaled recovery, not by claiming that one file rename is a transaction.
+- CLI, MCP, and HTTP part-write entry points call the shared `TicketStore::write_part` API in [parts.rs](../../../../../ticket/crates/ticket-api/src/storage/store/parts.rs); none may bypass its validation, lifecycle, or persistence rules.
+- Filesystem operations use the existing per-ticket lock and manifest model in [ticket_fs.rs](../../../../../ticket/crates/ticket-api/src/storage/ticket_fs.rs). Multi-file consistency is provided by journaled recovery, not by claiming that one file rename is a transaction.
 - Read projections and legacy reads consume the manifest and part model; migration and undo preserve the same stable IDs and manifest order.
 - Typed references remain non-ticket references in `[[refs]]`. Ticket-to-ticket dependency edges remain in the edge model and are not replaced by references.
 - Validation evidence is stored in test-api and linked to the implementing ticket and this specification.
@@ -152,11 +156,11 @@ The following validation specs are required gates:
 
 ### Positions
 
-- Part model and stable-ID addressing: `implemented` at [TicketPart](../../../../ticket/crates/ticket-api/src/model/ticket.rs#L16-L28); stable UUID identity is independent of the deterministic kind-slug path.
-- Shared part write gate: `implemented` at [TicketStore::write_part](../../../../ticket/crates/ticket-api/src/storage/store/parts.rs#L10-L115); blank-write validation, lifecycle checks, and path planning share one API.
-- Filesystem persistence and manifest publication: `implemented` at [TicketFs::write_part](../../../../ticket/crates/ticket-api/src/storage/ticket_fs.rs#L538-L612), [transaction::publish](../../../../ticket/crates/ticket-api/src/storage/ticket_fs/transaction.rs#L54-L81), and [transaction::recover](../../../../ticket/crates/ticket-api/src/storage/ticket_fs/transaction.rs#L280-L337); journaled writes stage and back up parts and manifests, with a durable generation commit point and idempotent recovery.
-- Plan freeze: `implemented` at [TicketFs::apply_plan_freeze](../../../../ticket/crates/ticket-api/src/storage/ticket_fs.rs#L717-L755); only existing planning parts are frozen and absent kinds remain absent.
-- Part-layout migration and live-store cleanup: `not-implemented`; W3 provides the migration interface and W4 applies the approved plans.
+- Part model and stable-ID addressing: `implemented` at [TicketPart](../../../../../ticket/crates/ticket-api/src/model/ticket.rs#L16-L28); stable UUID identity is independent of the deterministic kind-slug path.
+- Shared part write gate: `implemented` at [TicketStore::write_part](../../../../../ticket/crates/ticket-api/src/storage/store/parts.rs#L10-L115); blank-write validation, lifecycle checks, and path planning share one API.
+- Filesystem persistence and manifest publication: `implemented` at [TicketFs::write_part](../../../../../ticket/crates/ticket-api/src/storage/ticket_fs.rs#L538-L612), [transaction::publish](../../../../../ticket/crates/ticket-api/src/storage/ticket_fs/transaction.rs#L54-L81), and [transaction::recover](../../../../../ticket/crates/ticket-api/src/storage/ticket_fs/transaction.rs#L280-L337); journaled writes stage and back up parts and manifests, with a durable generation commit point and idempotent recovery.
+- Plan freeze: `implemented` at [TicketFs::apply_plan_freeze](../../../../../ticket/crates/ticket-api/src/storage/ticket_fs.rs#L717-L755); only existing planning parts are frozen and absent kinds remain absent.
+- Part-layout migration tooling: `implemented` at the [planner](../../../../../ticket/crates/ticket-api/src/storage/store/part_layout_migration/planning.rs), [apply executor](../../../../../ticket/crates/ticket-api/src/storage/store/part_layout_migration/execution.rs), [verify/undo operations](../../../../../ticket/crates/ticket-api/src/storage/store/part_layout_migration/verify_undo.rs), [TicketFs adapter](../../../../../ticket/crates/ticket-api/src/storage/ticket_fs/part_layout.rs), and [CLI command](../../../../../ticket/src/cli/commands/migrate_part_layout.rs). The approved live-store application remains pending W4.
 
 ### Validation evidence
 
@@ -167,7 +171,15 @@ Validation executions are recorded and read back from the canonical test store:
 - Local test-store execution `exec-vt-ticket-parts-transport-tests-20261013-w2` failed: `cargo test -p ticket --all-features` reported 98 passed and 48 failed. The reported failures include test setup with states `open` and `planned` rejected by the current schema; transport compilation passed. The transport guard remains unverified.
 
 The execution records live in the workspace's ignored `.workflow-tools/test` store and were read back by ID.
-The refreshed eight code references validate against the meta-workspace root, and the spec health check reports zero issues.
+The current 19 code references validate against the meta-workspace root, and the spec health check reports zero issues.
+
+### W3 validation
+
+- `cargo test -p ticket-api` passed: 250 tests across five suites; execution [exec-vt-ticket-parts-api-tests-20261013-w3](../../../test/executions/exec-vt-ticket-parts-api-tests-20261013-w3.json).
+- `cargo fmt --check -p ticket-api` and `cargo fmt --check -p ticket` passed; execution [exec-vt-ticket-parts-format-20261013-w3](../../../test/executions/exec-vt-ticket-parts-format-20261013-w3.json).
+- Focused migration API tests passed (8 tests); focused migration CLI and batch-guard tests passed (7 tests total).
+- `cargo test -p ticket --all-features` remains blocked: 105 passed and 48 failed. Explicit failures in the CLI fixture tests use schema-invalid `open` or `planned` states, matching the failure class reproduced in W2; the transport guard remains unverified. The run is recorded as [exec-vt-ticket-parts-transport-tests-20261013-w3](../../../test/executions/exec-vt-ticket-parts-transport-tests-20261013-w3.json).
+- W3 is blocked on the required full ticket-package test gate. W4 has not started, and no inventoried store has been migrated.
 
 ## Scope
 

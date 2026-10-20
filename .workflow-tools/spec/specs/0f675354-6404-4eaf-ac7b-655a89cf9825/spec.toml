@@ -1,0 +1,10 @@
+id = "0f675354-6404-4eaf-ac7b-655a89cf9825"
+created_at = "2026-10-15T18:45:10.387762300+00:00"
+title = "Lifecycle-hook log locator records"
+state = "draft"
+component = "log-api"
+parent = "55c7e6ab-0bad-4fa5-ab49-c320f0dbd5a7"
+related_tickets = [{ store_root = "../.workflow-tools/ticket", ticket_id = "141d7917-41e7-4745-985f-b300ce76d95d", workspace = "workflow-tools" }]
+scope = "internal"
+slug = "context-engine/vscode-copilot-lifecycle-hook-observability/log-locator-records"
+type = "specification"
