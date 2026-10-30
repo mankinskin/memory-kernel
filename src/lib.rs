@@ -5,6 +5,7 @@ pub mod error;
 pub mod generated_markdown;
 pub mod index_generator;
 pub mod interoperability;
+pub mod lifecycle;
 pub mod model;
 pub mod operation_journal;
 pub mod query;

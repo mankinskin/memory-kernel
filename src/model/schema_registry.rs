@@ -2,6 +2,7 @@ use std::{collections::BTreeMap, path::Path};
 
 use super::schema::EntityTypeSchema;
 use crate::error::StorageError;
+use crate::lifecycle::LifecycleSchema;
 
 /// Registry of entity type schemas.
 ///
@@ -41,10 +42,13 @@ impl SchemaRegistry {
     /// Load a single TOML schema file into the registry.
     pub fn load_file(&mut self, path: &Path) -> Result<(), StorageError> {
         let content = std::fs::read_to_string(path)?;
-        let schema: EntityTypeSchema =
-            toml::from_str(&content).map_err(|e| StorageError::SchemaFileParse {
+        let schema =
+            EntityTypeSchema::from_toml(&content).map_err(|e| StorageError::SchemaFileParse {
                 path: path.to_path_buf(),
-                reason: e.to_string(),
+                reason: match e {
+                    crate::lifecycle::LifecycleError::InvalidSchema(reason) => reason,
+                    other => other.to_string(),
+                },
             })?;
         self.schemas.insert(schema.type_id.clone(), schema);
         Ok(())

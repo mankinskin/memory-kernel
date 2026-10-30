@@ -73,9 +73,7 @@ impl EntityTypeSchema {
     }
 
     pub fn allows_transition(&self, from: &str, to: &str) -> bool {
-        self.transitions
-            .iter()
-            .any(|t| (t.from == from && t.to == to) || (t.from == to && t.to == from))
+        crate::lifecycle::LifecycleDefinition::allows_transition(self, from, to)
     }
 
     /// States legally reachable from `from` in a single transition.
@@ -83,16 +81,7 @@ impl EntityTypeSchema {
     /// Transitions are traversed undirected (matching [`Self::allows_transition`]
     /// and [`Self::find_path`]), so this reports every state adjacent to `from`.
     pub fn allowed_next_states(&self, from: &str) -> Vec<String> {
-        let mut states = std::collections::BTreeSet::new();
-        for t in &self.transitions {
-            if t.from == from {
-                states.insert(t.to.clone());
-            }
-            if t.to == from {
-                states.insert(t.from.clone());
-            }
-        }
-        states.into_iter().collect()
+        crate::lifecycle::LifecycleDefinition::allowed_next_states(self, from)
     }
 
     /// Build a recovery-oriented [`SchemaValidationError::InvalidTransition`] for

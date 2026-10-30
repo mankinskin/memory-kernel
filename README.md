@@ -17,6 +17,20 @@ board APIs. The `InteroperableArtifact` contract is now owned by this package
 because move journals are kernel artifacts; domain-specific interoperability
 traits remain with their domains.
 
+## Shared lifecycle
+
+`memory_kernel::lifecycle` owns the shared six-state vocabulary,
+`LifecycleSchema` JSON/TOML parsing, `LifecycleDefinition` schema-driven
+transition defaults, and `BasicLifecycle` pause/resume/cancel/complete rules.
+`LifecycleSubject` supplies domain-owned identity, snapshot and error types
+to the independent read, transition and capability traits. Unsupported
+capabilities fail explicitly by default.
+
+Domains implement `NativeLifecycle` to map their own state names. The kernel
+does not know Ticket states, Mission identities, store paths, approval policy
+or journal persistence. Consumers retain those adapters and authorization
+checks; shared control defaults do not grant execution authority.
+
 ## Transport harness
 
 The workspace also publishes the sibling `transport-harness` crate. Workflow
