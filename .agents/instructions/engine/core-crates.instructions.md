@@ -21,7 +21,7 @@ When changing upper layers, check assumptions in lower layers first.
 
 ## Discovery Checklist
 
-Before editing, per [AGENTS.md](../../../AGENTS.md#operating-principles)'s context-gathering and existing-tests rules:
+Before editing, per AGENTS.md (`../../../AGENTS.md#operating-principles`)'s context-gathering and existing-tests rules:
 1. Read crate-level `README.md` and `HIGH_LEVEL_GUIDE.md` when available.
 2. Read existing tests for expected behavior.
 
@@ -34,4 +34,4 @@ Before editing, per [AGENTS.md](../../../AGENTS.md#operating-principles)'s conte
 let _tracing = init_test_tracing!(&graph);
 ```
 
-- Use `target/test-logs/` for full debug output when tests fail, per [AGENTS.md](../../../AGENTS.md#operating-principles)'s test-log rule.
+- Use `target/test-logs/` for full debug output when tests fail, per AGENTS.md (`../../../AGENTS.md#operating-principles`)'s test-log rule.

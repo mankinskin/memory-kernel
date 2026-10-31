@@ -29,4 +29,4 @@ This boundary belongs here, rather than in
 [core-crates.instructions.md](core-crates.instructions.md), because the
 core-crates guidance applies only to the `context-stack` layers. It derives
 from R3 and R4 of
-[182940eb repository architecture dependency policies](../../../.spec/specs/182940eb-0df3-4fa0-8aff-2abce6095708/body.md).
+182940eb repository architecture dependency policies (`../../../.spec/specs/182940eb-0df3-4fa0-8aff-2abce6095708/body.md`).
